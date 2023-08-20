@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import cv2
 from datetime import datetime
 import numpy as np
@@ -12,9 +14,9 @@ BLUE = (255, 0, 0)
 
 arg0, CAM, DIR = sys.argv
 DIR = DIR.rstrip("/")
+CAM = int(CAM)
 print(f"CAM={CAM} DIR={DIR}")
 pathlib.Path(DIR).mkdir(parents=True, exist_ok=True)
-CAM = int(CAM)
 
 
 def should_save(x: int, y: int, w: int, h: int, iw: int, ih: int) -> bool:
