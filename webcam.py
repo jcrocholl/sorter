@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-import cv2
 from datetime import datetime
-import numpy as np
 import pathlib
 import subprocess
 import sys
 import time
+
+import cv2
 
 RED = (0, 0, 255)
 GREEN = (0, 255, 0)
@@ -40,18 +40,15 @@ def should_save(x: int, y: int, w: int, h: int, iw: int, ih: int) -> bool:
         print(f"bottom={bottom} too close")
         return False
     c = 100 * (x + w // 2) // iw
-    if not (30 < c < 70):
+    if not 30 < c < 70:
         print(f"c={c} off center")
         return False
     return True
 
 
-def shell(cmd: str):
-    subprocess.run(cmd, shell=True)
-
-
 def v4l2_ctl(cam: int, flags: str):
-    shell(f"/usr/bin/v4l2-ctl --device /dev/video{cam} {flags}")
+    cmd = f"/usr/bin/v4l2-ctl --device /dev/video{cam} {flags}".split()
+    subprocess.run(cmd, check=True)
 
 
 def adjust_webcam(cam: int):
