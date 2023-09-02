@@ -89,12 +89,16 @@ class Histogram:
         """Human review for outliers, use C-Del to remove bad examples."""
         feh = "/usr/bin/feh --on-last-slide quit".split()
         temp = {f: self.bbox(f) for f in filenames}
-        feh.extend(temp.values())
+        feh.extend(sorted(temp.values()))
         subprocess.run(feh, check=True)
+        num_deleted = 0
         for t in temp:
             if not os.path.exists(temp[t]):
                 print(f"{temp[t]} was deleted => deleting {t}")
                 os.remove(t)
+                num_deleted += 1
+        if num_deleted:
+            print(f"deleted {num_deleted} of {len(filenames)} files")
 
     def review(self, lo: int, hi: int):
         self.evaluate()
@@ -120,7 +124,7 @@ class Histogram:
             self.feh(filenames_hi)
 
 
-Histogram("left", r"_l(\d+)_").review(1, 100)
-Histogram("right", r"_r(\d+)_").review(0, 99)
-Histogram("width", r"_w(\d+)_").review(1, 99)
-Histogram("height", r"_h(\d+)\.").review(1, 99)
+Histogram("left", r"_l(\d+)_").review(2, 100)
+Histogram("right", r"_r(\d+)_").review(0, 98)
+Histogram("width", r"_w(\d+)_").review(2, 98)
+Histogram("height", r"_h(\d+)\.").review(2, 98)
