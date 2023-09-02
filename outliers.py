@@ -5,6 +5,7 @@ from collections.abc import Iterable
 import os
 import re
 import subprocess
+import sys
 
 import cv2
 
@@ -33,9 +34,13 @@ class Histogram:
                     self.max = n
 
     def filenames(self, dirname=".", ext=".jpg") -> Iterable[str]:
-        for filename in os.listdir(dirname):
-            if filename.endswith(ext):
+        if len(sys.argv) > 1:
+            for filename in sys.argv[1:]:
                 yield filename
+        else:
+            for filename in os.listdir(dirname):
+                if filename.endswith(ext):
+                    yield filename
 
     def percentile(self, p: int) -> int:
         if p <= 0:
@@ -88,7 +93,11 @@ class Histogram:
     def feh(self, filenames: list[str]):
         """Human review for outliers, use C-Del to remove bad examples."""
         feh = "/usr/bin/feh --on-last-slide quit".split()
-        temp = {f: self.bbox(f) for f in filenames}
+        temp = {
+            filename: self.bbox(filename)
+            for filename in filenames
+            if os.path.exists(filename)  # It may have been deleted.
+        }
         feh.extend(sorted(temp.values()))
         subprocess.run(feh, check=True)
         num_deleted = 0
@@ -126,5 +135,5 @@ class Histogram:
 
 Histogram("left", r"_l(\d+)_").review(2, 100)
 Histogram("right", r"_r(\d+)_").review(0, 98)
-Histogram("width", r"_w(\d+)_").review(2, 98)
-Histogram("height", r"_h(\d+)\.").review(2, 98)
+Histogram("width", r"_w(\d+)_").review(2, 97)
+Histogram("height", r"_h(\d+)\.").review(2, 95)
