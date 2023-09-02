@@ -6,35 +6,28 @@ import pathlib
 import re
 import shutil
 import struct
+import time
 
 import cv2
 from PIL import Image
 
-# Don't swap color channels on these.
-PRESERVE_COLOR_CHANNELS = [
-    "animal",
-    "human_tool",
-    "minifig",
-    "plant",
-    "technic_axle",
-    "technic_connector",
-    "technic_gear",
-]
-
-
-def sha1_percent(key: str) -> float:
-    bytes = sha1(key.encode("utf-8")).digest()[:8]
-    return float(struct.unpack("L", bytes)[0] * 100) / 2**64
-
 
 def train_test_split(base: str) -> str:
-    percent = sha1_percent(base)
-    if percent < 80:
-        return "train2023"
-    elif percent < 90:
+    """Deterministically split dataset into train/eval/test parts.
+
+    Keep images captured within the same minute together in the same
+    train/eval set. Otherwise most eval images are extremely similar
+    to training images captured a few milliseconds earlier or later,
+    which produces high precision & recall metrics but is cheating,
+    since we want our model to generalize rather than memorize.
+    """
+    t = time.strptime(base[: 8 + 1 + 6], "%Y%m%d_%H%M%S")
+    remainder = t.tm_min % 10
+    if remainder == 8:
         return "val2023"
-    else:
+    if remainder == 9:
         return "test2023"
+    return "train2023"
 
 
 def path_to_class(path: pathlib.Path) -> str:
@@ -72,28 +65,6 @@ def write_yaml(class_names: list[str]):
         print("]", file=outfile)
 
 
-def export_jpg(class_name: str, src: pathlib.Path, dst: pathlib.Path):
-    percent = int(sha1_percent(str(src.name)))
-    if percent & 7 == 0 or any(
-        class_name.startswith(prefix) for prefix in PRESERVE_COLOR_CHANNELS
-    ):
-        # Avoid hard links because then if we do decide to modify
-        # it later then that would also modify the source.
-        shutil.copy(src, dst)
-    else:
-        # Deterministically swap blue / green / red color channels.
-        img = cv2.imread(str(src))
-        b, g, r = cv2.split(img)
-        if percent & 1:
-            r, g = g, r
-        if percent & 2:
-            g, b = b, g
-        if percent & 4:
-            r, b = b, r
-        img = cv2.merge([b, g, r])
-        cv2.imwrite(str(dst), img)
-
-
 def export_dir(
     path: pathlib.Path,
     class_id: int,
@@ -128,8 +99,6 @@ def export_dir(
         if not output_jpg.exists():
             images.mkdir(parents=True, exist_ok=True)
             os.link(child, output_jpg)
-            # Uncomment if you want to swap color channels:
-            # export_jpg(class_name, child, output_jpg)
 
         labels = pathlib.Path("../yolov7/bricks/labels") / split
         labels.mkdir(parents=True, exist_ok=True)
