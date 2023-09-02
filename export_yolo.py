@@ -29,13 +29,16 @@ def train_test_split(base: str) -> str:
 
 
 def path_to_class(path: pathlib.Path) -> str:
-    """Converts a directory path to a human-readable sorter class name."""
-    slash_parts = list(path.parts)
-    underscore_parts = slash_parts[-1].split("_")
-    if underscore_parts[0][:4].isdigit():
-        # Remove the long part name, keep the number.
-        slash_parts[-1] = underscore_parts[0]
-    return "_".join(slash_parts)
+    """Converts a directory path to a human-readable sorter class name.
+
+    The class name cannot have slashes in it, to avoid nested
+    subdirectories in YOLO images and labels dataset directories.
+    """
+    if path.name[:4].isdigit():
+        # Example: 3702_technic_brick_1x8_with_holes
+        return path.name
+    # Example: minifig_minecraft_head
+    return "_".join(path.parts)
 
 
 def find_paths_with_jpg_files(path: pathlib.Path) -> list[pathlib.Path]:
@@ -72,7 +75,7 @@ def export_dir(
 ):
     """Exports one class (directory) of images to YOLO format."""
     class_name = path_to_class(path)
-    print(f"exporting {path} as name={class_name} id={class_id}")
+    print(f"id={class_id}\tname={class_name}\tfrom {path}")
     for child in path.iterdir():
         if not child.name.endswith(".jpg"):
             continue
