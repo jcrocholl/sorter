@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 
-from hashlib import sha1
+"""Exports training/evaluation/test datasets to YOLO format."""
+
 import os
 import pathlib
 import re
-import shutil
-import struct
 import time
 
-import cv2
 from PIL import Image
 
 
 def train_test_split(base: str) -> str:
-    """Deterministically split dataset into train/eval/test parts.
+    """Splits dataset into train/eval/test parts deterministically.
 
     Keep images captured within the same minute together in the same
     train/eval set. Otherwise most eval images are extremely similar
@@ -31,6 +29,7 @@ def train_test_split(base: str) -> str:
 
 
 def path_to_class(path: pathlib.Path) -> str:
+    """Converts a directory path to a human-readable sorter class name."""
     slash_parts = list(path.parts)
     underscore_parts = slash_parts[-1].split("_")
     if underscore_parts[0][:4].isdigit():
@@ -40,6 +39,7 @@ def path_to_class(path: pathlib.Path) -> str:
 
 
 def find_paths_with_jpg_files(path: pathlib.Path) -> list[pathlib.Path]:
+    """Finds all subdirectories of working dire that contain JPG images."""
     results = []
     found_jpg = False
     for child in path.iterdir():
@@ -53,7 +53,8 @@ def find_paths_with_jpg_files(path: pathlib.Path) -> list[pathlib.Path]:
 
 
 def write_yaml(class_names: list[str]):
-    with open("../yolov7/data/bricks.yaml", "wt") as outfile:
+    """Writes dataset config file in YAML format for YOLO."""
+    with open("../yolov7/data/bricks.yaml", "wt", encoding="utf-8") as outfile:
         print("# Bricks dataset by Johann C. Rocholl", file=outfile)
         print("train: bricks/images/train2023", file=outfile)
         print("val: bricks/images/val2023", file=outfile)
@@ -69,6 +70,7 @@ def export_dir(
     path: pathlib.Path,
     class_id: int,
 ):
+    """Exports one class (directory) of images to YOLO format."""
     class_name = path_to_class(path)
     print(f"exporting {path} as name={class_name} id={class_id}")
     for child in path.iterdir():
@@ -103,11 +105,12 @@ def export_dir(
         labels = pathlib.Path("../yolov7/bricks/labels") / split
         labels.mkdir(parents=True, exist_ok=True)
         output_txt = labels / f"{output_base}.txt"
-        with open(output_txt, "wt") as txt:
+        with open(output_txt, "wt", encoding="utf-8") as txt:
             txt.write(f"{class_id:d} {fx:.3f} {fy:.3f} {fw:.3f} {fh:.3f}\n")
 
 
 def main():
+    """Runs the whole YOLO dataset export for all classes."""
     here = pathlib.Path(".")
     paths = find_paths_with_jpg_files(here)
     paths.sort()
