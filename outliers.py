@@ -92,48 +92,50 @@ class Histogram:
 
     def feh(self, filenames: list[str]):
         """Human review for outliers, use C-Del to remove bad examples."""
-        feh = "/usr/bin/feh --on-last-slide quit".split()
-        temp = {
-            filename: self.bbox(filename)
-            for filename in filenames
-            if os.path.exists(filename)  # It may have been deleted.
-        }
-        feh.extend(sorted(temp.values()))
+        feh = "/usr/bin/feh --auto-zoom --g 2000x2000 --on-last-slide quit".split()
+        pairs = [
+            (original, self.bbox(original))
+            for original in filenames
+            if os.path.exists(original)  # It may have been deleted.
+        ]
+        feh.extend([bbox for original, bbox in pairs])
         subprocess.run(feh, check=True)
         num_deleted = 0
-        for t in temp:
-            if not os.path.exists(temp[t]):
-                print(f"{temp[t]} was deleted => deleting {t}")
-                os.remove(t)
+        for original, bbox in pairs:
+            if not os.path.exists(bbox):
+                print(f"{bbox} was deleted => deleting {original}")
+                os.remove(original)
                 num_deleted += 1
         if num_deleted:
-            print(f"deleted {num_deleted} of {len(filenames)} files")
+            print(f"deleted {num_deleted} of {len(pairs)} files")
 
     def review(self, lo: int, hi: int):
         self.evaluate()
         n_lo = self.percentile(lo)
         n_hi = self.percentile(hi)
-        filenames_lo = []
-        filenames_hi = []
+        pairs_lo = []
+        pairs_hi = []
         for filename in self.filenames():
             match = self.regex.search(filename)
             if match:
                 n = int(match.group(1))
                 if n < n_lo:
-                    filenames_lo.append(filename)
+                    pairs_lo.append((n, filename))
                 elif n > n_hi:
-                    filenames_hi.append(filename)
-        if filenames_lo:
-            num = len(filenames_lo)
+                    pairs_hi.append((n, filename))
+        pairs_lo.sort()
+        pairs_hi.sort(reverse=True)
+        if pairs_lo:
+            num = len(pairs_lo)
             print(f"Reviewing {num} images where {self.name} < {n_lo} ({lo}%)")
-            self.feh(filenames_lo)
-        if filenames_hi:
-            num = len(filenames_hi)
+            self.feh([filename for n, filename in pairs_lo])
+        if pairs_hi:
+            num = len(pairs_hi)
             print(f"Reviewing {num} images where {self.name} > {n_hi} ({hi}%)")
-            self.feh(filenames_hi)
+            self.feh([filename for n, filename in pairs_hi])
 
 
-Histogram("left", r"_l(\d+)_").review(2, 100)
-Histogram("right", r"_r(\d+)_").review(0, 98)
 Histogram("width", r"_w(\d+)_").review(2, 97)
 Histogram("height", r"_h(\d+)\.").review(2, 95)
+Histogram("left", r"_l(\d+)_").review(2, 100)
+Histogram("right", r"_r(\d+)_").review(0, 98)
