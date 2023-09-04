@@ -13,14 +13,14 @@ from PIL import Image
 def train_test_split(base: str) -> str:
     """Splits dataset into train/eval/test parts deterministically.
 
-    Keep images captured within the same minute together in the same
+    Keep images captured within the same second together in the same
     train/eval set. Otherwise most eval images are extremely similar
     to training images captured a few milliseconds earlier or later,
     which produces high precision & recall metrics but is cheating,
     since we want our model to generalize rather than memorize.
     """
     t = time.strptime(base[: 8 + 1 + 6], "%Y%m%d_%H%M%S")
-    remainder = t.tm_min % 10
+    remainder = t.tm_sec % 10
     if remainder == 8:
         return "val2023"
     if remainder == 9:
