@@ -2,7 +2,7 @@
 train: bricks/images/train2023
 val: bricks/images/val2023
 test: bricks/images/test2023
-nc: 75
+nc: 63
 names: [
     98302_engine_smooth_small_1x2_side_plate,                          # train=200  val=0   test=0
     92950_arch_1x6_raised_arch,                                        # train=300  val=0   test=0
@@ -21,10 +21,8 @@ names: [
     3002_brick_2x3,                                                    # train=1079 val=237 test=229
     3001_brick_2x4,                                                    # train=3794 val=476 test=476
     2456_brick_2x6,                                                    # train=1265 val=117 test=114
-    3002_brick_2x3_broken,                                             # train=489  val=0   test=11
-    3034_plate_2x8_broken,                                             # train=195  val=5   test=0
-    98282_vehicle_mudguard_4x2.5x1_with_arch_round_broken,             # train=547  val=63  test=90
-    13349_wedge_4x4_triple_inverted_dirty,                             # train=174  val=0   test=26
+    broken,                                                            # train=1231 val=68  test=101
+    dirty,                                                             # train=174  val=0   test=26
     4131_door_1x4x5,                                                   # train=87   val=56  test=57
     6154_door_frame_1x4x4_lift,                                        # train=240  val=30  test=30
     3437_duplo_brick_2x2,                                              # train=300  val=0   test=0
@@ -48,17 +46,7 @@ names: [
     3031_plate_4x4,                                                    # train=641  val=116 test=43
     3032_plate_4x6,                                                    # train=140  val=30  test=30
     3958_plate_6x6,                                                    # train=782  val=111 test=107
-    reject_3d_printed,                                                 # train=100  val=0   test=0
-    reject_craft_resin,                                                # train=103  val=37  test=60
-    reject_elastic,                                                    # train=474  val=0   test=26
-    reject_garbage,                                                    # train=2305 val=392 test=403
-    reject_glass,                                                      # train=97   val=50  test=53
-    reject_key_ring,                                                   # train=182  val=0   test=18
-    reject_nerf_dart,                                                  # train=87   val=13  test=0
-    reject_pencil_eraser,                                              # train=192  val=0   test=8
-    reject_rubber_toy,                                                 # train=200  val=0   test=0
-    reject_toy_car,                                                    # train=300  val=0   test=0
-    reject_wood_toy,                                                   # train=300  val=0   test=0
+    reject,                                                            # train=4340 val=492 test=568
     3039_slope_45_2x2,                                                 # train=497  val=123 test=80
     3747a_slope_inverted_33_3x2_with_flat_bottom_pin,                  # train=265  val=81  test=54
     3660_slope_inverted_45_2x2_with_flat_bottom_pin,                   # train=340  val=30  test=30
