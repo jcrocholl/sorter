@@ -1,0 +1,82 @@
+# Bricks dataset by Johann C. Rocholl
+train: bricks/images/train2023
+val: bricks/images/val2023
+test: bricks/images/test2023
+nc: 75
+names: [
+    98302_engine_smooth_small_1x2_side_plate,                          # train=200  val=0   test=0
+    92950_arch_1x6_raised_arch,                                        # train=300  val=0   test=0
+    44728_bracket_1x2_2x2,                                             # train=734  val=85  test=81
+    99207_bracket_1x2_2x2_inverted,                                    # train=361  val=87  test=52
+    4733_brick_modified_1x1_with_studs_on_4_sides,                     # train=195  val=48  test=57
+    11211_brick_modified_1x2_with_studs_on_side,                       # train=803  val=38  test=59
+    3004_brick_1x2,                                                    # train=4314 val=641 test=668
+    98283_brick_modified_1x2_with_masonry_profile,                     # train=492  val=135 test=73
+    3622_brick_1x3,                                                    # train=1709 val=155 test=259
+    3010_brick_1x4,                                                    # train=3607 val=399 test=384
+    30414_brick_modified_1x4_with_studs_on_side,                       # train=821  val=171 test=208
+    3009_brick_1x6,                                                    # train=298  val=0   test=2
+    3003_brick_2x2,                                                    # train=2665 val=423 test=395
+    3941_brick_round_2x2_with_axle_hole,                               # train=260  val=84  test=56
+    3002_brick_2x3,                                                    # train=1079 val=237 test=229
+    3001_brick_2x4,                                                    # train=3794 val=476 test=476
+    2456_brick_2x6,                                                    # train=1265 val=117 test=114
+    3002_brick_2x3_broken,                                             # train=489  val=0   test=11
+    3034_plate_2x8_broken,                                             # train=195  val=5   test=0
+    98282_vehicle_mudguard_4x2.5x1_with_arch_round_broken,             # train=547  val=63  test=90
+    13349_wedge_4x4_triple_inverted_dirty,                             # train=174  val=0   test=26
+    4131_door_1x4x5,                                                   # train=87   val=56  test=57
+    6154_door_frame_1x4x4_lift,                                        # train=240  val=30  test=30
+    3437_duplo_brick_2x2,                                              # train=300  val=0   test=0
+    96874_brick_and_axle_separator,                                    # train=563  val=84  test=53
+    minifig_970c00_hips_and_legs_plain,                                # train=721  val=43  test=136
+    minifig_head,                                                      # train=3638 val=445 test=417
+    minifig_helmet,                                                    # train=2317 val=324 test=259
+    minifig_legs,                                                      # train=2333 val=411 test=280
+    minifig_legs_short,                                                # train=897  val=58  test=45
+    minifig_minecraft_head,                                            # train=2019 val=261 test=220
+    3023_plate_1x2,                                                    # train=3966 val=583 test=457
+    3710_plate_1x4,                                                    # train=2008 val=311 test=268
+    3666_plate_1x6,                                                    # train=687  val=99  test=96
+    3022_plate_2x2,                                                    # train=3150 val=284 test=174
+    87580_plate_modified_2x2_with_groove_and_1_stud_in_center_jumper,  # train=477  val=60  test=63
+    3021_plate_2x3,                                                    # train=2439 val=316 test=258
+    3020_plate_2x4,                                                    # train=5833 val=809 test=906
+    65509_plate_modified_2x4_with_2_studs_double_jumper,               # train=151  val=30  test=19
+    3795_plate_2x6,                                                    # train=380  val=60  test=60
+    3034_plate_2x8,                                                    # train=383  val=17  test=0
+    3031_plate_4x4,                                                    # train=641  val=116 test=43
+    3032_plate_4x6,                                                    # train=140  val=30  test=30
+    3958_plate_6x6,                                                    # train=782  val=111 test=107
+    reject_3d_printed,                                                 # train=100  val=0   test=0
+    reject_craft_resin,                                                # train=103  val=37  test=60
+    reject_elastic,                                                    # train=474  val=0   test=26
+    reject_garbage,                                                    # train=2305 val=392 test=403
+    reject_glass,                                                      # train=97   val=50  test=53
+    reject_key_ring,                                                   # train=182  val=0   test=18
+    reject_nerf_dart,                                                  # train=87   val=13  test=0
+    reject_pencil_eraser,                                              # train=192  val=0   test=8
+    reject_rubber_toy,                                                 # train=200  val=0   test=0
+    reject_toy_car,                                                    # train=300  val=0   test=0
+    reject_wood_toy,                                                   # train=300  val=0   test=0
+    3039_slope_45_2x2,                                                 # train=497  val=123 test=80
+    3747a_slope_inverted_33_3x2_with_flat_bottom_pin,                  # train=265  val=81  test=54
+    3660_slope_inverted_45_2x2_with_flat_bottom_pin,                   # train=340  val=30  test=30
+    32000_technic_brick_1x2_with_holes,                                # train=736  val=32  test=32
+    3894_technic_brick_1x6_with_holes,                                 # train=351  val=19  test=30
+    3702_technic_brick_1x8_with_holes,                                 # train=197  val=43  test=60
+    3650b_technic_gear_24_tooth_crown,                                 # train=184  val=16  test=0
+    32316_technic_liftarm_thick_1x5,                                   # train=400  val=0   test=0
+    32001_technic_plate_2x6_with_5_holes,                              # train=240  val=30  test=30
+    2431_tile_1x4,                                                     # train=458  val=12  test=30
+    3068_tile_2x2,                                                     # train=661  val=94  test=145
+    87079_tile_2x4,                                                    # train=351  val=49  test=0
+    98282_vehicle_mudguard_4x2.5x1_with_arch_round,                    # train=293  val=47  test=60
+    55981_wheel_18mm_x_14mm_with_pin_hole,                             # train=162  val=36  test=2
+    55981c04_wheel_18mm_x_14mm_with_pin_hole,                          # train=185  val=15  test=0
+    55982c05_wheel_18mm_x_14mm_with_axle_hole,                         # train=200  val=0   test=0
+    6582_wheel_20x30_balloon_medium,                                   # train=111  val=30  test=59
+    2695_wheel_30mm_x_13mm,                                            # train=135  val=38  test=27
+    60593_window_1x2x3_flat_front,                                     # train=400  val=0   test=0
+    60594_window_1x4x3_no_shutter_tabs,                                # train=323  val=17  test=60
+]
