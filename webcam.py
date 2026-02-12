@@ -19,29 +19,36 @@ print(f"CAM={CAM} DIR={DIR}")
 pathlib.Path(DIR).mkdir(parents=True, exist_ok=True)
 
 
-def should_save(x: int, y: int, w: int, h: int, iw: int, ih: int) -> bool:
-    if w < 20:
-        print(f"w={w} too narrow")
+def should_save(
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    image_width: int,
+    image_height: int,
+) -> bool:
+    if width < 20:
+        print(f"width={width} too narrow")
         return False
-    if w > 0.6 * iw:
-        print(f"w={w} too wide")
+    if width > 0.6 * image_width:
+        print(f"width={width} too wide")
         return False
-    if h < 20:
-        print(f"h={h} too short")
+    if height < 20:
+        print(f"height={height} too short")
         return False
-    if h > 0.6 * ih:
-        print(f"h={h} too long")
+    if height > 0.6 * image_height:
+        print(f"height={height} too long")
         return False
     if y < 60:
         print(f"top={y} too far away")
         return False
-    bottom = ih - h - y
+    bottom = image_height - height - y
     if bottom < 60:
         print(f"bottom={bottom} too close")
         return False
-    c = 100 * (x + w // 2) // iw
+    c = 100 * (x + width // 2) // image_width
     if not 30 < c < 70:
-        print(f"c={c} off center")
+        print(f"center={c} off center")
         return False
     return True
 
@@ -73,7 +80,7 @@ while True:
 
     # Bricks should move towards the camera, top to bottom:
     im = cv2.rotate(im, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    ih, iw, ic = im.shape
+    image_height, image_width, image_channels = im.shape
 
     hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
     hue, saturation, value = cv2.split(hsv)
@@ -81,26 +88,45 @@ while True:
 
     blur = cv2.blur(gray, (5, 5))
     thresh = cv2.Canny(blur, threshold1=80, threshold2=160)
-    x, y, w, h = cv2.boundingRect(thresh)
+    x, y, width, height = cv2.boundingRect(thresh)
 
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):  # Press q to quit.
         break
 
-    save = w and h and should_save(x=x, y=y, w=w, h=h, iw=iw, ih=ih)
+    save = (
+        width
+        and height
+        and should_save(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            image_width=image_width,
+            image_height=image_height,
+        )
+    )
     if save:
         now = datetime.now().strftime("%Y%m%d_%H%M%S%f")[: 8 + 1 + 6 + 3]
-        filename = f"{DIR}/{now}_l{x}_r{x+w}_t{y}_b{y+h}_w{w}_h{h}.jpg"
+        filename = (
+            f"{DIR}/{now}"
+            f"_l{x}_r{x + width}"
+            f"_t{y}_b{y + height}"
+            f"_w{width}_h{height}.jpg"
+        )
         print(filename)
         cv2.imwrite(filename, im)
 
     # Draw rectangle for on-screen debugging, green means saving to disk.
-    cv2.rectangle(im, (x, y), (x + w, y + h), GREEN if save else BLUE, 3)
+    color = GREEN if save else BLUE
+    cv2.rectangle(im, (x, y), (x + width, y + height), color, 3)
 
     left = cv2.cvtColor(cv2.vconcat([blur, thresh]), cv2.COLOR_GRAY2BGR)
     right = im
     # Uncomment the following line to make the preview window bigger:
-    # right = cv2.resize(im, (iw * 2, ih * 2), cv2.INTER_CUBIC)
+    # right = cv2.resize(
+    #     im, (image_width * 2, image_height * 2), cv2.INTER_CUBIC
+    # )
     lh, lw, lc = left.shape
     rh, rw, rc = right.shape
     left = cv2.resize(left, (lw * rh // lh, rh), cv2.INTER_CUBIC)

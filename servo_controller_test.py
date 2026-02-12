@@ -32,7 +32,7 @@ def test_servo_controller_send_angle():
     sc.send_angle(cell, 90)
 
     # Cell B is column 2 (address 0x42), which is sc.column_controllers["B"]
-    # Verify that the correct channel was updated on the correct PCA9685 instance
+    # Verify correct channel update on the correct PCA9685 instance
     pca_b = sc.column_controllers["B"]
 
     # Row 7 is channel 7 + 5 = 12 (since row > 5)

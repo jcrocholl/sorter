@@ -82,10 +82,8 @@ def write_yaml(
             num_val = num_val_per_class[class_name]
             num_test = num_test_per_class[class_name]
             ljust = " " * (longest - len(class_name))
-            print(
-                f"    {class_name},{ljust}  # train={num_train:<4} val={num_val:<3} test={num_test}",
-                file=outfile,
-            )
+            comment = f"# train={num_train:<4} val={num_val:<3} test={num_test}"
+            print(f"    {class_name},{ljust}  {comment}", file=outfile)
         print("]", file=outfile)
 
 
@@ -110,20 +108,20 @@ def export_dir(
         if not child.is_file():
             continue
         base = re.search(r"^\d{8}_\d{9}", child.name).group(0)
-        l = int(re.search(r"_l(\d+)_", child.name).group(1))
-        r = int(re.search(r"_r(\d+)_", child.name).group(1))
-        t = int(re.search(r"_t(\d+)_", child.name).group(1))
-        b = int(re.search(r"_b(\d+)_", child.name).group(1))
+        left = int(re.search(r"_l(\d+)_", child.name).group(1))
+        right = int(re.search(r"_r(\d+)_", child.name).group(1))
+        top = int(re.search(r"_t(\d+)_", child.name).group(1))
+        bottom = int(re.search(r"_b(\d+)_", child.name).group(1))
 
         image = Image.open(child)  # This should not read raster data.
-        w = image.width
-        h = image.height
-        assert w * h == 640 * 480
+        width = image.width
+        height = image.height
+        assert width * height == 640 * 480
 
-        fx = (l + r) / 2 / w
-        fy = (t + b) / 2 / h
-        fw = (r - l) / w
-        fh = (b - t) / h
+        center_x = (left + right) / 2 / width
+        center_y = (top + bottom) / 2 / height
+        box_width = (right - left) / width
+        box_height = (bottom - top) / height
         output_base = f"{base}_{class_name}"
         split = train_test_split(base)
         if "train" in split:
@@ -143,7 +141,10 @@ def export_dir(
         labels.mkdir(parents=True, exist_ok=True)
         output_txt = labels / f"{output_base}.txt"
         with open(output_txt, "wt", encoding="utf-8") as txt:
-            txt.write(f"{class_id:d} {fx:.3f} {fy:.3f} {fw:.3f} {fh:.3f}\n")
+            txt.write(
+                f"{class_id:d} {center_x:.3f} {center_y:.3f} "
+                f"{box_width:.3f} {box_height:.3f}\n"
+            )
 
 
 def main():

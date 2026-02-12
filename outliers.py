@@ -77,22 +77,24 @@ class Histogram:
         temp = "/tmp/" + os.path.basename(filename)
         im = cv2.imread(filename)
         # Draw rectangle for on-screen debugging.
-        match = re.search(r"l(\d+)_r(\d+)_t(\d+)_b(\d+)_w(\d+)_h(\d+)", filename)
-        l = int(match.group(1))
-        r = int(match.group(2))
-        t = int(match.group(3))
-        b = int(match.group(4))
-        w = int(match.group(5))
-        h = int(match.group(6))
-        assert w == r - l
-        assert h == b - t
-        cv2.rectangle(im, (l, t), (r, b), BLUE, 3)
+        pattern = r"l(\d+)_r(\d+)_t(\d+)_b(\d+)_w(\d+)_h(\d+)"
+        match = re.search(pattern, filename)
+        left = int(match.group(1))
+        right = int(match.group(2))
+        top = int(match.group(3))
+        bottom = int(match.group(4))
+        width = int(match.group(5))
+        height = int(match.group(6))
+        assert width == right - left
+        assert height == bottom - top
+        cv2.rectangle(im, (left, top), (right, bottom), BLUE, 3)
         cv2.imwrite(temp, im)
         return temp
 
     def feh(self, filenames: list[str]):
         """Human review for outliers, use C-Del to remove bad examples."""
-        feh = "/usr/bin/feh --auto-zoom --g 2000x2000 --on-last-slide quit".split()
+        args = "--auto-zoom --g 2000x2000 --on-last-slide quit"
+        feh = f"/usr/bin/feh {args}".split()
         pairs = [
             (original, self.bbox(original))
             for original in filenames
