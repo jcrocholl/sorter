@@ -111,7 +111,4 @@ def test_export_dir(exporter):
     with patch.object(exporter, "export_file") as mock_export_file:
         exporter.export_dir(mock_path)
         assert "1234_brick" in exporter.class_names
-        mock_export_file.assert_called_once_with(
-            mock_jpg, "1234_brick", 0, "train2023"
-        )
-
+        mock_export_file.assert_called_once_with(mock_jpg, "1234_brick", 0, "train2023")
