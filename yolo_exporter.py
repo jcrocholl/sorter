@@ -20,7 +20,7 @@ class YoloExporter:
         self.num_val_per_class = defaultdict(int)
         self.num_test_per_class = defaultdict(int)
 
-    def train_test_split(self, base: str) -> str:
+    def train_test_split(self, child: pathlib.Path) -> str:
         """Splits dataset into train/eval/test parts deterministically.
 
         Keep images captured within the same second together in the same
@@ -29,6 +29,7 @@ class YoloExporter:
         which produces high precision & recall metrics but is cheating,
         since we want our model to generalize rather than memorize.
         """
+        base = child.name
         t = time.strptime(base[: 8 + 1 + 6], "%Y%m%d_%H%M%S")
         remainder = t.tm_sec % 10
         if remainder == 8:
@@ -100,56 +101,72 @@ class YoloExporter:
             class_id = len(self.class_names)
             self.class_names.append(class_name)
         print(f"id={class_id}\tname={class_name}\tfrom {path}")
+
         for child in path.iterdir():
             if not child.name.endswith(".jpg"):
                 continue
             if not child.is_file():
                 continue
-            match = re.search(r"^\d{8}_\d{9}", child.name)
-            if not match:
-                continue
-            base = match.group(0)
+            split = self.train_test_split(child)
+            self.export_file(child, class_name, class_id, split)
 
-            try:
-                left = int(re.search(r"_l(\d+)_", child.name).group(1))
-                right = int(re.search(r"_r(\d+)_", child.name).group(1))
-                top = int(re.search(r"_t(\d+)_", child.name).group(1))
-                bottom = int(re.search(r"_b(\d+)_", child.name).group(1))
-            except (AttributeError, ValueError):
-                continue
+    def export_file(
+        self,
+        child: pathlib.Path,
+        class_name: str,
+        class_id: int,
+        split: str,
+    ) -> None:
+        """Exports a single image file with labels to YOLO dataset format."""
+        match = re.search(r"^\d{8}_\d{9}", child.name)
+        if not match:
+            print("failed to parse date_time numbers")
+            return
+        base = match.group(0)
 
-            with Image.open(child) as image:
-                width = image.width
-                height = image.height
-            assert width * height == 640 * 480
+        try:
+            left = int(re.search(r"_l(\d+)_", child.name).group(1))
+            right = int(re.search(r"_r(\d+)_", child.name).group(1))
+            top = int(re.search(r"_t(\d+)_", child.name).group(1))
+            bottom = int(re.search(r"_b(\d+)_", child.name).group(1))
+        except (AttributeError, ValueError):
+            print("failed to parse l_r_t_b numbers")
+            return
 
-            center_x = (left + right) / 2 / width
-            center_y = (top + bottom) / 2 / height
-            box_width = (right - left) / width
-            box_height = (bottom - top) / height
-            output_base = f"{base}_{class_name}"
-            split = self.train_test_split(base)
-            if "train" in split:
-                self.num_train_per_class[class_name] += 1
-            elif "val" in split:
-                self.num_val_per_class[class_name] += 1
-            elif "test" in split:
-                self.num_test_per_class[class_name] += 1
+        with Image.open(child) as image:
+            width = image.width
+            height = image.height
+        assert width * height == 640 * 480
 
-            images = self.output_dir / "bricks" / "images" / split
-            output_jpg = images / f"{output_base}.jpg"
-            if not output_jpg.exists():
-                images.mkdir(parents=True, exist_ok=True)
-                os.link(child, output_jpg)
+        center_x = (left + right) / 2 / width
+        center_y = (top + bottom) / 2 / height
+        box_width = (right - left) / width
+        box_height = (bottom - top) / height
+        output_base = f"{base}_{class_name}"
 
-            labels = self.output_dir / "bricks" / "labels" / split
-            labels.mkdir(parents=True, exist_ok=True)
-            output_txt = labels / f"{output_base}.txt"
-            with open(output_txt, "wt", encoding="utf-8") as txt:
-                txt.write(
-                    f"{class_id:d} {center_x:.3f} {center_y:.3f} "
-                    f"{box_width:.3f} {box_height:.3f}\n"
-                )
+        images = self.output_dir / "bricks" / "images" / split
+        output_jpg = images / f"{output_base}.jpg"
+        if not output_jpg.exists():
+            images.mkdir(parents=True, exist_ok=True)
+            os.link(child, output_jpg)
+
+        labels = self.output_dir / "bricks" / "labels" / split
+        labels.mkdir(parents=True, exist_ok=True)
+        output_txt = labels / f"{output_base}.txt"
+        with open(output_txt, "wt", encoding="utf-8") as txt:
+            txt.write(
+                f"{class_id:d} {center_x:.3f} {center_y:.3f} "
+                f"{box_width:.3f} {box_height:.3f}\n"
+            )
+
+        if "train" in split:
+            self.num_train_per_class[class_name] += 1
+        elif "val" in split:
+            self.num_val_per_class[class_name] += 1
+        elif "test" in split:
+            self.num_test_per_class[class_name] += 1
+        else:
+            print("unexpected split:", split)
 
     def export_all(self, search_path: pathlib.Path = pathlib.Path(".")):
         """Runs the whole YOLO dataset export for all classes."""

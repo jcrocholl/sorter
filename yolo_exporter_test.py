@@ -10,9 +10,15 @@ def exporter():
 
 
 def test_train_test_split(exporter):
-    assert exporter.train_test_split("20231026_120008") == "val2023"
-    assert exporter.train_test_split("20231026_120009") == "test2023"
-    assert exporter.train_test_split("20231026_120007") == "train2023"
+    mock_file = MagicMock(spec=pathlib.Path)
+    mock_file.name = "20231026_120008"
+    assert exporter.train_test_split(mock_file) == "val2023"
+
+    mock_file.name = "20231026_120009"
+    assert exporter.train_test_split(mock_file) == "test2023"
+
+    mock_file.name = "20231026_120007"
+    assert exporter.train_test_split(mock_file) == "train2023"
 
 
 def test_path_to_class(exporter):
@@ -63,21 +69,13 @@ def test_write_yaml(exporter):
     assert "class2," in written_content
 
 
-def test_export_dir(exporter):
-    mock_path = MagicMock(spec=pathlib.Path)
-    mock_path.parts = ["bricks"]
-    mock_path.name = "1234_brick"
-
+def test_export_file(exporter):
     mock_image = MagicMock()
     mock_image.width = 640
     mock_image.height = 480
 
     mock_jpg = MagicMock(spec=pathlib.Path)
     mock_jpg.name = "20231026_120000000_l10_r20_t30_b40_.jpg"
-    mock_jpg.is_file.return_value = True
-
-    # Set return value directly on the instance's mock method
-    mock_path.iterdir.return_value = [mock_jpg]
 
     m = mock_open()
     with (
@@ -88,12 +86,32 @@ def test_export_dir(exporter):
         patch("pathlib.Path.exists", return_value=False),
     ):
         mock_image_open.return_value.__enter__.return_value = mock_image
-        exporter.export_dir(mock_path)
+        exporter.export_file(mock_jpg, "class1", 0, "train2023")
 
-        assert "1234_brick" in exporter.class_names
         mock_link.assert_called_once()
         m.assert_called_once()
         handle = m()
         handle.write.assert_called_once()
         # 15/640=0.023, 35/480=0.073, 10/640=0.016, 10/480=0.021
         assert "0 0.023 0.073 0.016 0.021" in handle.write.call_args[0][0]
+        assert exporter.num_train_per_class["class1"] == 1
+
+
+def test_export_dir(exporter):
+    mock_path = MagicMock(spec=pathlib.Path)
+    mock_path.parts = ["bricks"]
+    mock_path.name = "1234_brick"
+
+    mock_jpg = MagicMock(spec=pathlib.Path)
+    mock_jpg.name = "20231026_120000000_l10_r20_t30_b40_.jpg"
+    mock_jpg.is_file.return_value = True
+
+    mock_path.iterdir.return_value = [mock_jpg]
+
+    with patch.object(exporter, "export_file") as mock_export_file:
+        exporter.export_dir(mock_path)
+        assert "1234_brick" in exporter.class_names
+        mock_export_file.assert_called_once_with(
+            mock_jpg, "1234_brick", 0, "train2023"
+        )
+
