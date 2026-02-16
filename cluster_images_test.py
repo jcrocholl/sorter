@@ -1,5 +1,7 @@
 import pytest
 from datetime import datetime
+from pathlib import Path
+from unittest.mock import patch, MagicMock
 from cluster_images import cluster_images, main, parse_timestamp
 
 
@@ -30,10 +32,10 @@ def test_cluster_images_basic(tmp_path):
 
     assert len(clusters) == 2
     assert len(clusters[0]) == 2
-    assert clusters[0][0][1] == "20230523_105352000_a.jpg"
-    assert clusters[0][1][1] == "20230523_105352500_b.jpg"
+    assert clusters[0][0][1] == tmp_path / "20230523_105352000_a.jpg"
+    assert clusters[0][1][1] == tmp_path / "20230523_105352500_b.jpg"
     assert len(clusters[1]) == 1
-    assert clusters[1][0][1] == "20230523_105354000_c.jpg"
+    assert clusters[1][0][1] == tmp_path / "20230523_105354000_c.jpg"
 
 
 def test_cluster_images_no_files(tmp_path):
@@ -48,19 +50,38 @@ def test_cluster_images_invalid_filenames(tmp_path):
     clusters = cluster_images(tmp_path)
     assert len(clusters) == 1
     assert len(clusters[0]) == 1
-    assert clusters[0][0][1] == "20230523_105352000_a.jpg"
+    assert clusters[0][0][1] == tmp_path / "20230523_105352000_a.jpg"
 
 
 def test_main_with_arguments(tmp_path, capsys):
-    (tmp_path / "20230523_105352000_a.jpg").touch()
+    # Filename must match YoloExporter's expectations for date/time and bounding box
+    src = tmp_path / "20230523_105352000_l10_r20_t30_b40_.jpg"
+    src.touch()
 
-    # Test main with the tmp_path as an argument
-    main(["cluster_images.py", str(tmp_path)])
+    mock_image = MagicMock()
+    mock_image.width = 480
+    mock_image.height = 640
+
+    with (
+        patch("PIL.Image.open") as mock_image_open,
+        patch("os.link") as mock_link,
+    ):
+        mock_image_open.return_value.__enter__.return_value = mock_image
+        # Test main with the tmp_path as an argument
+        main(["cluster_images.py", str(tmp_path)])
+
+        # Verify os.link was called with the correct arguments
+        dst = (
+            Path("../yolo_dataset/bricks/images/train2023")
+            / f"20230523_105352000_{tmp_path.name}.jpg"
+        )
+        mock_link.assert_called_once_with(src, dst)
 
     captured = capsys.readouterr()
     assert "Total Clusters: 1" in captured.out
     assert "Total Images:   1" in captured.out
-    assert "Train:   1 clusters (100.0%),    1 images" in captured.out
+    # Format changed: no colon, different spacing
+    assert "Train      1 clusters (100.0%),    1 images" in captured.out
 
 
 def test_main_no_images(tmp_path, capsys):

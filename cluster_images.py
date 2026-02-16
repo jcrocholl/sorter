@@ -7,6 +7,7 @@ import re
 import sys
 from pathlib import Path
 from datetime import datetime
+from yolo_exporter import YoloExporter
 
 
 def parse_yolo_label(filename: str, class_id: int = 0) -> str:
@@ -43,17 +44,17 @@ def parse_timestamp(filename: str) -> datetime:
 def cluster_images(
     input_path: Path,
     gap_threshold_seconds: float = 0.5,
-) -> list[list[tuple[datetime, str]]]:
-    filenames = sorted([p.name for p in input_path.glob("*.jpg")])
+) -> list[list[tuple[datetime, Path]]]:
+    filenames = sorted(input_path.glob("*.jpg"))
     if not filenames:
         return []
 
     # Parse timestamps and store with original filename
     data = []
-    for name in filenames:
+    for path in filenames:
         try:
-            dt = parse_timestamp(name)
-            data.append((dt, name))
+            dt = parse_timestamp(path.name)
+            data.append((dt, path))
         except (ValueError, IndexError):
             continue
 
@@ -98,58 +99,60 @@ def main(argv: list[str]) -> None:
     random.seed(42)  # Reset seed for stability in cluster order
     random.shuffle(clusters)
 
-    for cluster in clusters:
-        first_name = cluster[0][1]
-        last_name = cluster[-1][1]
-        first_label = parse_yolo_label(first_name)
-        last_label = parse_yolo_label(last_name)
-        print(f"Cluster: {first_name} {first_label}")
-        print(f"         {last_name} {last_label}")
-
-    total_images = sum(len(c) for c in clusters)
     total_clusters = len(clusters)
     if total_clusters == 0:
         print("No images found to cluster.")
         return
 
-    val_target = int(total_clusters * 0.25)
-    test_target = int(total_clusters * 0.25)
-
-    train_data = []
-    val_data = []
-    test_data = []
-    for i, cluster in enumerate(clusters):
-        if i < val_target:
-            val_data.append(cluster)
-        elif i < (val_target + test_target):
-            test_data.append(cluster)
-        else:
-            train_data.append(cluster)
-
+    total_images = sum(len(c) for c in clusters)
     print(f"Total Clusters: {total_clusters}")
     print(f"Total Images:   {total_images}")
     print("-" * 50)
-    train_clusters = len(train_data)
-    val_clusters = len(val_data)
-    test_clusters = len(test_data)
-    train_images = sum(len(c) for c in train_data)
-    val_images = sum(len(c) for c in val_data)
-    test_images = sum(len(c) for c in test_data)
-    print(
-        f"Train: {train_clusters:3} clusters "
-        f"({train_clusters / total_clusters:5.1%}), "
-        f"{train_images:4} images"
-    )
-    print(
-        f"Val:   {val_clusters:3} clusters "
-        f"({val_clusters / total_clusters:5.1%}), "
-        f"{val_images:4} images"
-    )
-    print(
-        f"Test:  {test_clusters:3} clusters "
-        f"({test_clusters / total_clusters:5.1%}), "
-        f"{test_images:4} images"
-    )
+
+    # Initialize YoloExporter
+    exporter = YoloExporter(Path("../yolo_dataset"))
+
+    # Allocate clusters to sets and call YoloExporter
+    val_target = int(total_clusters * 0.25)
+    test_target = int(total_clusters * 0.25)
+
+    sets = {"train": [], "val": [], "test": []}
+    current_cluster_idx = 0
+
+    for set_name, target in [
+        ("val", val_target),
+        ("test", test_target),
+        ("train", total_clusters - val_target - test_target),
+    ]:
+        for _ in range(target):
+            if current_cluster_idx >= total_clusters:
+                break
+            cluster = clusters[current_cluster_idx]
+            sets[set_name].append(cluster)
+
+            # Export first and last file of each cluster
+            # First file
+            exporter.export_file(
+                cluster[0][1], cluster[0][1].parent.name, 0, f"{set_name}2023"
+            )
+            # Last file (if different from first)
+            if len(cluster) > 1:
+                exporter.export_file(
+                    cluster[-1][1], cluster[-1][1].parent.name, 0, f"{set_name}2023"
+                )
+
+            current_cluster_idx += 1
+
+    for set_name in ["train", "val", "test"]:
+        cluster_list = sets[set_name]
+        image_count = sum(len(c) for c in cluster_list)
+        percent = len(cluster_list) / total_clusters * 100 if total_clusters else 0
+        print(
+            f"{set_name.capitalize():<8} {len(cluster_list):>3} clusters "
+            f"({percent:>5.1f}%), {image_count:>4} images"
+        )
+
+    exporter.write_yaml()
 
 
 if __name__ == "__main__":
