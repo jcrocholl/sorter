@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
+
+"""Cluster images into groups based on time gaps between them."""
+
 import random
 import re
+import sys
+from pathlib import Path
 from datetime import datetime
 
 
-def parse_yolo_label(filename, class_id=0):
+def parse_yolo_label(filename: str, class_id: int = 0) -> str:
     """Extracts bounding box from filename and formats as YOLO label."""
     # Example filename: 20230511_121859430_l215_r404_t144_b312_w189_h168.jpg
     match = re.search(r"_l(\d+)_r(\d+)_t(\d+)_b(\d+)_", filename)
@@ -24,10 +29,11 @@ def parse_yolo_label(filename, class_id=0):
     return f"{class_id} {center_x:.3f} {center_y:.3f} {box_width:.3f} {box_height:.3f}"
 
 
-def cluster_images(file_list_path, gap_threshold_seconds=1):
-    with open(file_list_path, "r") as f:
-        filenames = [line.strip() for line in f if line.strip().endswith(".jpg")]
-
+def cluster_images(
+    input_path: Path,
+    gap_threshold_seconds: float = 0.5,
+) -> list[list[tuple[datetime, str]]]:
+    filenames = sorted([p.name for p in input_path.glob("*.jpg")])
     if not filenames:
         return []
 
@@ -37,8 +43,8 @@ def cluster_images(file_list_path, gap_threshold_seconds=1):
         try:
             # Format: 20230523_105352366_...
             parts = name.split("_")
-            ts_str = parts[0] + parts[1][:6]  # YYYYMMDD + HHMMSS
-            dt = datetime.strptime(ts_str, "%Y%m%d%H%M%S")
+            ts_str = parts[0] + parts[1]  # YYYYmmdd + HHMMSSfff
+            dt = datetime.strptime(ts_str, "%Y%m%d%H%M%S%f")
             data.append((dt, name))
         except (ValueError, IndexError):
             continue
@@ -68,19 +74,17 @@ def cluster_images(file_list_path, gap_threshold_seconds=1):
     return clusters
 
 
-def save_list(filename, data):
-    with open(filename, "w") as f:
-        for cluster in data:
-            for dt, name in cluster:
-                f.write(f"{name}\n")
-
-
-def main():
+def main(argv: list[str]) -> None:
     # Set seed for reproducibility
     random.seed(42)
 
-    path = "/tmp/all_filenames.txt"
-    clusters = cluster_images(path)
+    args = argv[1:]
+    if not args:
+        args = ["."]
+
+    clusters = []
+    for arg in args:
+        clusters.extend(cluster_images(Path(arg)))
 
     # Shuffle clusters for random allocation
     random.seed(42)  # Reset seed for stability in cluster order
@@ -96,13 +100,16 @@ def main():
 
     total_images = sum(len(c) for c in clusters)
     total_clusters = len(clusters)
+    if total_clusters == 0:
+        print("No images found to cluster.")
+        return
+
     val_target = int(total_clusters * 0.25)
     test_target = int(total_clusters * 0.25)
 
     train_data = []
     val_data = []
     test_data = []
-
     for i, cluster in enumerate(clusters):
         if i < val_target:
             val_data.append(cluster)
@@ -136,10 +143,6 @@ def main():
         f"{test_images:4} images"
     )
 
-    save_list("train.txt", train_data)
-    save_list("val.txt", val_data)
-    save_list("test.txt", test_data)
-
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
