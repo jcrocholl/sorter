@@ -109,10 +109,7 @@ while True:
     if save:
         now = datetime.now().strftime("%Y%m%d_%H%M%S%f")[: 8 + 1 + 6 + 3]
         filename = (
-            f"{DIR}/{now}"
-            f"_l{x}_r{x + width}"
-            f"_t{y}_b{y + height}"
-            f"_w{width}_h{height}.jpg"
+            f"{DIR}/{now}_l{x}_r{x + width}_t{y}_b{y + height}_w{width}_h{height}.jpg"
         )
         print(filename)
         cv2.imwrite(filename, im)
