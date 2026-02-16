@@ -54,7 +54,8 @@ class YoloExporter:
             # Example: 3702_technic_brick_1x8_with_holes
             return path.name
         # Example: minifig_minecraft_head
-        return "_".join(path.parts)
+        parts = [p for p in path.parts if p not in ("/", os.sep)]
+        return "_".join(parts)
 
     def find_paths_with_jpg_files(self, path: pathlib.Path) -> list[pathlib.Path]:
         """Finds all subdirectories of path that contain JPG images."""
@@ -95,12 +96,7 @@ class YoloExporter:
     def export_dir(self, path: pathlib.Path):
         """Exports one class (directory) of images to YOLO format."""
         class_name = self.path_to_class(path)
-        try:
-            class_id = self.class_names.index(class_name)
-        except ValueError:
-            class_id = len(self.class_names)
-            self.class_names.append(class_name)
-        print(f"id={class_id}\tname={class_name}\tfrom {path}")
+        print(f"name={class_name}\tfrom {path}")
 
         for child in path.iterdir():
             if not child.name.endswith(".jpg"):
@@ -108,16 +104,21 @@ class YoloExporter:
             if not child.is_file():
                 continue
             split = self.train_test_split(child)
-            self.export_file(child, class_name, class_id, split)
+            self.export_file(child, class_name, split)
 
     def export_file(
         self,
         child: pathlib.Path,
         class_name: str,
-        class_id: int,
         split: str,
     ) -> None:
         """Exports a single image file with labels to YOLO dataset format."""
+        try:
+            class_id = self.class_names.index(class_name)
+        except ValueError:
+            class_id = len(self.class_names)
+            self.class_names.append(class_name)
+
         match = re.search(r"^\d{8}_\d{9}", child.name)
         if not match:
             print("failed to parse date_time numbers")

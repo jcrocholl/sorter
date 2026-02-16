@@ -130,16 +130,15 @@ def main(argv: list[str]) -> None:
             cluster = clusters[current_cluster_idx]
             sets[set_name].append(cluster)
 
+            # Resolve class name
+            class_name = exporter.path_to_class(cluster[0][1].parent)
+
             # Export first and last file of each cluster
             # First file
-            exporter.export_file(
-                cluster[0][1], cluster[0][1].parent.name, 0, f"{set_name}2023"
-            )
+            exporter.export_file(cluster[0][1], class_name, f"{set_name}2023")
             # Last file (if different from first)
             if len(cluster) > 1:
-                exporter.export_file(
-                    cluster[-1][1], cluster[-1][1].parent.name, 0, f"{set_name}2023"
-                )
+                exporter.export_file(cluster[-1][1], class_name, f"{set_name}2023")
 
             current_cluster_idx += 1
 

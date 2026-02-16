@@ -55,7 +55,9 @@ def test_cluster_images_invalid_filenames(tmp_path):
 
 def test_main_with_arguments(tmp_path, capsys):
     # Filename must match YoloExporter's expectations for date/time and bounding box
-    src = tmp_path / "20230523_105352000_l10_r20_t30_b40_.jpg"
+    class_dir = tmp_path / "3001_brick_2x4"
+    class_dir.mkdir()
+    src = class_dir / "20230523_105352000_l10_r20_t30_b40_.jpg"
     src.touch()
 
     mock_image = MagicMock()
@@ -68,12 +70,12 @@ def test_main_with_arguments(tmp_path, capsys):
     ):
         mock_image_open.return_value.__enter__.return_value = mock_image
         # Test main with the tmp_path as an argument
-        main(["cluster_images.py", str(tmp_path)])
+        main(["cluster_images.py", str(class_dir)])
 
         # Verify os.link was called with the correct arguments
         dst = (
             Path("../yolo_dataset/bricks/images/train2023")
-            / f"20230523_105352000_{tmp_path.name}.jpg"
+            / "20230523_105352000_3001_brick_2x4.jpg"
         )
         mock_link.assert_called_once_with(src, dst)
 

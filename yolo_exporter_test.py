@@ -85,7 +85,7 @@ def test_export_file(exporter, tmp_path, output_dir):
     ):
         mock_image_open.return_value.__enter__.return_value = mock_image
 
-        exporter.export_file(jpg_file, "class1", 0, "train2023")
+        exporter.export_file(jpg_file, "class1", "train2023")
 
         # Verify links and labels are created
         # We still mock os.link to avoid complexity of real hardlinking in tests
@@ -105,6 +105,7 @@ def test_export_file(exporter, tmp_path, output_dir):
         content = label_file.read_text()
         assert "0 0.023 0.073 0.016 0.021" in content
         assert exporter.num_train_per_class["class1"] == 1
+        assert "class1" in exporter.class_names
 
 
 def test_export_dir(exporter, tmp_path):
@@ -115,5 +116,4 @@ def test_export_dir(exporter, tmp_path):
 
     with patch.object(exporter, "export_file") as mock_export_file:
         exporter.export_dir(class_dir)
-        assert "1234_brick" in exporter.class_names
-        mock_export_file.assert_called_once_with(jpg_file, "1234_brick", 0, "train2023")
+        mock_export_file.assert_called_once_with(jpg_file, "1234_brick", "train2023")
