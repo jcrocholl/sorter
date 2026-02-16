@@ -1,4 +1,19 @@
-from cluster_images import cluster_images, main
+import pytest
+from datetime import datetime
+from cluster_images import cluster_images, main, parse_timestamp
+
+
+def test_parse_timestamp():
+    # Valid timestamp
+    ts = parse_timestamp("20230523_105352366_foo.jpg")
+    assert ts == datetime(2023, 5, 23, 10, 53, 52, 366000)
+
+    # Invalid timestamps
+    with pytest.raises(ValueError):
+        parse_timestamp("invalid_filename.jpg")
+
+    with pytest.raises(IndexError):
+        parse_timestamp("20230523.jpg")
 
 
 def test_cluster_images_basic(tmp_path):

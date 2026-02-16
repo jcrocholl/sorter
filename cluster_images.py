@@ -29,6 +29,17 @@ def parse_yolo_label(filename: str, class_id: int = 0) -> str:
     return f"{class_id} {center_x:.3f} {center_y:.3f} {box_width:.3f} {box_height:.3f}"
 
 
+def parse_timestamp(filename: str) -> datetime:
+    """Parses timestamp from filename.
+
+    Example: 20230523_105352366_... ->
+      datetime(2023, 5, 23, 10, 53, 52, 366000)
+    """
+    parts = filename.split("_")
+    ts_str = parts[0] + parts[1]  # YYYYmmdd + HHMMSSfff
+    return datetime.strptime(ts_str, "%Y%m%d%H%M%S%f")
+
+
 def cluster_images(
     input_path: Path,
     gap_threshold_seconds: float = 0.5,
@@ -41,10 +52,7 @@ def cluster_images(
     data = []
     for name in filenames:
         try:
-            # Format: 20230523_105352366_...
-            parts = name.split("_")
-            ts_str = parts[0] + parts[1]  # YYYYmmdd + HHMMSSfff
-            dt = datetime.strptime(ts_str, "%Y%m%d%H%M%S%f")
+            dt = parse_timestamp(name)
             data.append((dt, name))
         except (ValueError, IndexError):
             continue
