@@ -176,9 +176,8 @@ def main(argv: list[str]) -> None:
     print("-" * 50)
 
     sets = {"train": [], "val": [], "test": []}
-
-    for class_name, clusters in clusters_by_class.items():
-        # Shuffle clusters for random allocation
+    for class_name in sorted(clusters_by_class.keys()):
+        clusters = clusters_by_class[class_name]
         random.shuffle(clusters)
 
         num_clusters = len(clusters)
