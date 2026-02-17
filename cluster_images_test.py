@@ -8,6 +8,7 @@ from cluster_images import (
     parse_timestamp,
     cluster_and_filter_by_class,
     export_cluster,
+    find_paths_with_jpg_files,
 )
 
 
@@ -42,6 +43,25 @@ def test_cluster_images_basic(tmp_path):
     assert clusters[0][1][1] == tmp_path / "20230523_105352500_b.jpg"
     assert len(clusters[1]) == 1
     assert clusters[1][0][1] == tmp_path / "20230523_105354000_c.jpg"
+
+
+def test_find_paths_with_jpg_files(tmp_path):
+    # Setup real file structure
+    dir_with_jpg = tmp_path / "dir1"
+    dir_with_jpg.mkdir()
+    (dir_with_jpg / "test.jpg").touch()
+
+    empty_dir = tmp_path / "dir2"
+    empty_dir.mkdir()
+
+    dir_with_yaml = tmp_path / "dir3"
+    dir_with_yaml.mkdir()
+    (dir_with_yaml / "bricks.yaml").touch()
+
+    results = find_paths_with_jpg_files(tmp_path)
+    assert dir_with_jpg in results
+    assert empty_dir not in results
+    assert dir_with_yaml not in results
 
 
 def test_cluster_images_no_files(tmp_path):
@@ -113,26 +133,17 @@ def test_process_images_aggregates_classes(tmp_path):
 
     # Mock YoloExporter
     exporter = MagicMock()
-
-    def side_effect(p):
-        if str(p) == str(d1.parent):
-            return [d1]
-        if str(p) == str(d2.parent):
-            return [d2]
-        return []
-
-    exporter.find_paths_with_jpg_files.side_effect = side_effect
     exporter.path_to_class.return_value = "broken"
 
     # Verify aggregation (25 clusters > MIN_CLUSTERS_PER_CLASS=20)
-    result = cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)])
+    result = cluster_and_filter_by_class(exporter, [d1.parent, d2.parent])
     assert len(result["broken"]) == 25
 
     # Verify filtering (reduce to 10 total < 20)
     for f in list(d1.glob("*.jpg"))[5:] + list(d2.glob("*.jpg"))[5:]:
         f.unlink()
 
-    result = cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)])
+    result = cluster_and_filter_by_class(exporter, [d1.parent, d2.parent])
     assert "broken" not in result
 
 
@@ -179,7 +190,6 @@ def test_per_class_split(tmp_path):
 
     # Mock exporter
     exporter = MagicMock()
-    exporter.find_paths_with_jpg_files.return_value = [class_dir]
     exporter.path_to_class.return_value = "class_a"
 
     # Mock MIN_CLUSTERS_PER_CLASS to allow small number of clusters

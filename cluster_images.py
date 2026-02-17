@@ -78,6 +78,20 @@ def print_summary(sets: dict[str, list], total_clusters: int) -> None:
         )
 
 
+def find_paths_with_jpg_files(path: Path) -> list[Path]:
+    """Finds all subdirectories of path that contain JPG images."""
+    results = []
+    found_jpg = False
+    for child in path.iterdir():
+        if child.is_dir():
+            results.extend(find_paths_with_jpg_files(child))
+        elif child.is_file() and child.name.endswith(".jpg"):
+            found_jpg = True
+    if found_jpg:
+        results.append(path)
+    return results
+
+
 def cluster_and_filter_by_class(
     exporter: YoloExporter,
     root_dirs: list[Path],
@@ -86,7 +100,7 @@ def cluster_and_filter_by_class(
     clusters_by_class = defaultdict(list)
 
     for root_dir in root_dirs:
-        for class_dir in exporter.find_paths_with_jpg_files(root_dir):
+        for class_dir in find_paths_with_jpg_files(root_dir):
             class_clusters = cluster_images_in_directory(class_dir)
             class_name = exporter.path_to_class(class_dir)
             clusters_by_class[class_name].extend(class_clusters)

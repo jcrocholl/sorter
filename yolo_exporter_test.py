@@ -32,25 +32,6 @@ def test_path_to_class(exporter, input_dir):
     )
 
 
-def test_find_paths_with_jpg_files(exporter, input_dir):
-    # Setup real file structure
-    dir_with_jpg = input_dir / "dir1"
-    dir_with_jpg.mkdir()
-    (dir_with_jpg / "test.jpg").touch()
-
-    empty_dir = input_dir / "dir2"
-    empty_dir.mkdir()
-
-    dir_with_yaml = input_dir / "dir3"
-    dir_with_yaml.mkdir()
-    (dir_with_yaml / "bricks.yaml").touch()
-
-    results = exporter.find_paths_with_jpg_files(input_dir)
-    assert dir_with_jpg in results
-    assert empty_dir not in results
-    assert dir_with_yaml not in results
-
-
 def test_write_yaml(exporter, output_dir):
     exporter.class_names = ["3001_brick_2x4", "3002_brick_2x3"]
     exporter.num_train_per_class = {"3001_brick_2x4": 10, "3002_brick_2x3": 5}

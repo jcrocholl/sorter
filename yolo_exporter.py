@@ -49,19 +49,6 @@ class YoloExporter:
         # Example: minifig_minecraft_head
         return "_".join(rel_path.parts)
 
-    def find_paths_with_jpg_files(self, path: pathlib.Path) -> list[pathlib.Path]:
-        """Finds all subdirectories of path that contain JPG images."""
-        results = []
-        found_jpg = False
-        for child in path.iterdir():
-            if child.is_dir():
-                results.extend(self.find_paths_with_jpg_files(child))
-            elif child.is_file() and child.name.endswith(".jpg"):
-                found_jpg = True
-        if found_jpg:
-            results.append(path)
-        return results
-
     def write_yaml(self):
         """Writes dataset config file in YAML format for YOLO."""
         if not self.class_names:
