@@ -87,13 +87,15 @@ def main(argv: list[str]) -> None:
     # Set seed for reproducibility
     random.seed(42)
 
-    args = argv[1:]
-    if not args:
-        args = ["."]
+    # Initialize YoloExporter
+    exporter = YoloExporter(
+        input_dir=Path("../dataset/nested"),
+        output_dir=Path("../yolo_dataset"),
+    )
 
     clusters = []
-    for arg in args:
-        clusters.extend(cluster_images(Path(arg)))
+    for path in exporter.find_paths_with_jpg_files(Path(argv[1])):
+        clusters.extend(cluster_images(path))
 
     # Shuffle clusters for random allocation
     random.seed(42)  # Reset seed for stability in cluster order
@@ -108,12 +110,6 @@ def main(argv: list[str]) -> None:
     print(f"Total Clusters: {total_clusters}")
     print(f"Total Images:   {total_images}")
     print("-" * 50)
-
-    # Initialize YoloExporter
-    exporter = YoloExporter(
-        input_dir=Path("../dataset/nested"),
-        output_dir=Path("../yolo_dataset"),
-    )
 
     # Allocate clusters to sets and call YoloExporter
     val_target = int(total_clusters * 0.25)

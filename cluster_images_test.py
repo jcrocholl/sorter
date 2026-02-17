@@ -70,7 +70,7 @@ def test_main_with_arguments(tmp_path, capsys):
     ):
         mock_image_open.return_value.__enter__.return_value = mock_image
         # Test main with the tmp_path as an argument
-        main(["cluster_images.py", str(class_dir)])
+        main(["cluster_images.py", str(tmp_path)])
 
         # Verify os.link was called with the correct arguments
         dst = (
