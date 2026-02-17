@@ -3,31 +3,12 @@
 """Cluster images into groups based on time gaps between them."""
 
 import random
-import re
 import sys
 from pathlib import Path
 from datetime import datetime
 from yolo_exporter import YoloExporter
 
-
-def parse_yolo_label(filename: str, class_id: int = 0) -> str:
-    """Extracts bounding box from filename and formats as YOLO label."""
-    # Example filename: 20230511_121859430_l215_r404_t144_b312_w189_h168.jpg
-    match = re.search(r"_l(\d+)_r(\d+)_t(\d+)_b(\d+)_", filename)
-    if not match:
-        return "N/A"
-
-    left, right, top, bottom = map(int, match.groups())
-
-    # Assuming 640x480 as seen in export_yolo.py
-    width, height = 640, 480
-
-    center_x = (left + right) / 2 / width
-    center_y = (top + bottom) / 2 / height
-    box_width = (right - left) / width
-    box_height = (bottom - top) / height
-
-    return f"{class_id} {center_x:.3f} {center_y:.3f} {box_width:.3f} {box_height:.3f}"
+MIN_CLUSTERS_PER_DIR = 20
 
 
 def parse_timestamp(filename: str) -> datetime:
@@ -42,10 +23,10 @@ def parse_timestamp(filename: str) -> datetime:
 
 
 def cluster_images(
-    input_path: Path,
+    input_dir: Path,
     gap_threshold_seconds: float = 0.5,
 ) -> list[list[tuple[datetime, Path]]]:
-    filenames = sorted(input_path.glob("*.jpg"))
+    filenames = sorted(input_dir.glob("*.jpg"))
     if not filenames:
         return []
 
@@ -83,22 +64,41 @@ def cluster_images(
     return clusters
 
 
-def main(argv: list[str]) -> None:
-    # Set seed for reproducibility
-    random.seed(42)
+def print_summary(sets: dict[str, list], total_clusters: int) -> None:
+    """Prints a summary of clusters and images per set."""
+    for set_name in ["train", "val", "test"]:
+        cluster_list = sets[set_name]
+        image_count = sum(len(c) for c in cluster_list)
+        percent = len(cluster_list) / total_clusters * 100 if total_clusters else 0
+        print(
+            f"{set_name}:",
+            f"{len(cluster_list)} clusters ({percent:.1f}%),",
+            f"{image_count} images",
+        )
 
+
+def main(argv: list[str]) -> None:
     # Initialize YoloExporter
     exporter = YoloExporter(
         input_dir=Path("../dataset/nested"),
         output_dir=Path("../yolo_dataset"),
     )
 
+    args = argv[1:] or ["."]
     clusters = []
-    for path in exporter.find_paths_with_jpg_files(Path(argv[1])):
-        clusters.extend(cluster_images(path))
+    for root_dir in args:
+        for class_dir in exporter.find_paths_with_jpg_files(Path(root_dir)):
+            class_clusters = cluster_images(class_dir)
+            if len(class_clusters) < MIN_CLUSTERS_PER_DIR:
+                print(
+                    f"Skipping {class_dir.name} with only {len(class_clusters)} clusters."
+                )
+                continue
+            clusters.extend(class_clusters)
 
+    # Set seed for reproducibility
+    random.seed(42)
     # Shuffle clusters for random allocation
-    random.seed(42)  # Reset seed for stability in cluster order
     random.shuffle(clusters)
 
     total_clusters = len(clusters)
@@ -107,8 +107,8 @@ def main(argv: list[str]) -> None:
         return
 
     total_images = sum(len(c) for c in clusters)
-    print(f"Total Clusters: {total_clusters}")
-    print(f"Total Images:   {total_images}")
+    print(f"total clusters: {total_clusters}")
+    print(f"total images: {total_images}")
     print("-" * 50)
 
     # Allocate clusters to sets and call YoloExporter
@@ -121,7 +121,7 @@ def main(argv: list[str]) -> None:
     for set_name, target in [
         ("val", val_target),
         ("test", test_target),
-        ("train", total_clusters - val_target - test_target),
+        ("train", total_clusters),  # rest
     ]:
         for _ in range(target):
             if current_cluster_idx >= total_clusters:
@@ -133,24 +133,14 @@ def main(argv: list[str]) -> None:
             class_name = exporter.path_to_class(cluster[0][1].parent)
 
             # Export first and last file of each cluster
-            # First file
             exporter.export_file(cluster[0][1], class_name, f"{set_name}2023")
-            # Last file (if different from first)
             if len(cluster) > 1:
                 exporter.export_file(cluster[-1][1], class_name, f"{set_name}2023")
 
             current_cluster_idx += 1
 
-    for set_name in ["train", "val", "test"]:
-        cluster_list = sets[set_name]
-        image_count = sum(len(c) for c in cluster_list)
-        percent = len(cluster_list) / total_clusters * 100 if total_clusters else 0
-        print(
-            f"{set_name.capitalize():<8} {len(cluster_list):>3} clusters "
-            f"({percent:>5.1f}%), {image_count:>4} images"
-        )
-
     exporter.write_yaml()
+    print_summary(sets, total_clusters)
 
 
 if __name__ == "__main__":

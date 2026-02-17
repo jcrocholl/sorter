@@ -54,10 +54,9 @@ def test_cluster_images_invalid_filenames(tmp_path):
 
 
 def test_main_with_arguments(tmp_path, capsys):
-    # Filename must match YoloExporter's expectations for date/time and bounding box
     class_dir = tmp_path / "3001_brick_2x4"
     class_dir.mkdir()
-    src = class_dir / "20230523_105352000_l10_r20_t30_b40_.jpg"
+    src = class_dir / "20230523_105352000_l10_r20_t30_b40_w10_h10.jpg"
     src.touch()
 
     mock_image = MagicMock()
@@ -67,6 +66,7 @@ def test_main_with_arguments(tmp_path, capsys):
     with (
         patch("PIL.Image.open") as mock_image_open,
         patch("os.link") as mock_link,
+        patch("cluster_images.MIN_CLUSTERS_PER_DIR", 1),
     ):
         mock_image_open.return_value.__enter__.return_value = mock_image
         # Test main with the tmp_path as an argument
@@ -80,9 +80,9 @@ def test_main_with_arguments(tmp_path, capsys):
         mock_link.assert_called_once_with(src, dst)
 
     captured = capsys.readouterr()
-    assert "Total Clusters: 1" in captured.out
-    assert "Total Images:   1" in captured.out
-    assert "Train      1 clusters (100.0%),    1 images" in captured.out
+    assert "total clusters: 1" in captured.out
+    assert "total images: 1" in captured.out
+    assert "train: 1 clusters (100.0%), 1 images" in captured.out
 
 
 def test_main_no_images(tmp_path, capsys):

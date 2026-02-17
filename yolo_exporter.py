@@ -100,7 +100,7 @@ class YoloExporter:
 
         match = re.search(r"^\d{8}_\d{9}", child.name)
         if not match:
-            print("failed to parse date_time numbers")
+            print(f"failed to parse date_time numbers from {child.name}")
             return
         base = match.group(0)
 
