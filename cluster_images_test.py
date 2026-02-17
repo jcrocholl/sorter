@@ -74,7 +74,7 @@ def test_main_with_arguments(tmp_path, capsys):
 
         # Verify os.link was called with the correct arguments
         dst = (
-            Path("../yolo_dataset/bricks/images/train2023")
+            Path("../yolo_dataset/images/train2023/3001_brick_2x4")
             / "20230523_105352000_3001_brick_2x4.jpg"
         )
         mock_link.assert_called_once_with(src, dst)
@@ -82,7 +82,6 @@ def test_main_with_arguments(tmp_path, capsys):
     captured = capsys.readouterr()
     assert "Total Clusters: 1" in captured.out
     assert "Total Images:   1" in captured.out
-    # Format changed: no colon, different spacing
     assert "Train      1 clusters (100.0%),    1 images" in captured.out
 
 

@@ -110,7 +110,10 @@ def main(argv: list[str]) -> None:
     print("-" * 50)
 
     # Initialize YoloExporter
-    exporter = YoloExporter(Path("../yolo_dataset"))
+    exporter = YoloExporter(
+        input_dir=Path("../dataset/nested"),
+        output_dir=Path("../yolo_dataset"),
+    )
 
     # Allocate clusters to sets and call YoloExporter
     val_target = int(total_clusters * 0.25)

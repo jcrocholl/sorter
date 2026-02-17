@@ -6,37 +6,23 @@ from collections import defaultdict
 import os
 import pathlib
 import re
-import time
 from PIL import Image
 
 
 class YoloExporter:
     """Class to export dataset to YOLO format."""
 
-    def __init__(self, output_dir: pathlib.Path):
+    def __init__(
+        self,
+        input_dir: pathlib.Path,
+        output_dir: pathlib.Path,
+    ):
+        self.input_dir = input_dir
         self.output_dir = output_dir
         self.class_names = []
         self.num_train_per_class = defaultdict(int)
         self.num_val_per_class = defaultdict(int)
         self.num_test_per_class = defaultdict(int)
-
-    def train_test_split(self, child: pathlib.Path) -> str:
-        """Splits dataset into train/eval/test parts deterministically.
-
-        Keep images captured within the same second together in the same
-        train/eval set. Otherwise most eval images are extremely similar
-        to training images captured a few milliseconds earlier or later,
-        which produces high precision & recall metrics but is cheating,
-        since we want our model to generalize rather than memorize.
-        """
-        base = child.name
-        t = time.strptime(base[: 8 + 1 + 6], "%Y%m%d_%H%M%S")
-        remainder = t.tm_sec % 10
-        if remainder == 8:
-            return "val2023"
-        if remainder == 9:
-            return "test2023"
-        return "train2023"
 
     def path_to_class(self, path: pathlib.Path) -> str:
         """Converts a directory path to a human-readable sorter class name.
@@ -44,18 +30,24 @@ class YoloExporter:
         The class name cannot have slashes in it, to avoid nested
         subdirectories in YOLO images and labels dataset directories.
         """
-        if path.parts[0] in ("broken", "dirty", "reject"):
+        try:
+            rel_path = path.relative_to(self.input_dir)
+        except ValueError:
+            return path.name
+
+        if rel_path.parts and rel_path.parts[0] in ("broken", "dirty", "reject"):
             # Examples:
             # broken/98282_vehicle_mudguard_4x2.5x1_with_arch_round_broken
             # dirty/13349_wedge_4x4_triple_inverted_dirty
             # reject/nerf_dart
-            return path.parts[0]
+            return rel_path.parts[0]
+
         if path.name[:4].isdigit():
             # Example: 3702_technic_brick_1x8_with_holes
             return path.name
+
         # Example: minifig_minecraft_head
-        parts = [p for p in path.parts if p not in ("/", os.sep)]
-        return "_".join(parts)
+        return "_".join(rel_path.parts)
 
     def find_paths_with_jpg_files(self, path: pathlib.Path) -> list[pathlib.Path]:
         """Finds all subdirectories of path that contain JPG images."""
@@ -75,7 +67,7 @@ class YoloExporter:
         if not self.class_names:
             return
         longest = max(len(class_name) for class_name in self.class_names)
-        yaml_file = self.output_dir / "data" / "bricks.yaml"
+        yaml_file = self.output_dir / "bricks.yaml"
         yaml_file.parent.mkdir(parents=True, exist_ok=True)
         with open(yaml_file, "wt", encoding="utf-8") as outfile:
             print("# Bricks dataset by Johann C. Rocholl", file=outfile)
@@ -92,19 +84,6 @@ class YoloExporter:
                 comment = f"# train={num_train:<4} val={num_val:<3} test={num_test}"
                 print(f"    {class_name},{ljust}  {comment}", file=outfile)
             print("]", file=outfile)
-
-    def export_dir(self, path: pathlib.Path):
-        """Exports one class (directory) of images to YOLO format."""
-        class_name = self.path_to_class(path)
-        print(f"name={class_name}\tfrom {path}")
-
-        for child in path.iterdir():
-            if not child.name.endswith(".jpg"):
-                continue
-            if not child.is_file():
-                continue
-            split = self.train_test_split(child)
-            self.export_file(child, class_name, split)
 
     def export_file(
         self,
@@ -145,13 +124,13 @@ class YoloExporter:
         box_height = (bottom - top) / height
         output_base = f"{base}_{class_name}"
 
-        images = self.output_dir / "bricks" / "images" / split
+        images = self.output_dir / "images" / split / class_name
         output_jpg = images / f"{output_base}.jpg"
         if not output_jpg.exists():
             images.mkdir(parents=True, exist_ok=True)
             os.link(child, output_jpg)
 
-        labels = self.output_dir / "bricks" / "labels" / split
+        labels = self.output_dir / "labels" / split / class_name
         labels.mkdir(parents=True, exist_ok=True)
         output_txt = labels / f"{output_base}.txt"
         with open(output_txt, "wt", encoding="utf-8") as txt:
@@ -168,11 +147,3 @@ class YoloExporter:
             self.num_test_per_class[class_name] += 1
         else:
             print("unexpected split:", split)
-
-    def export_all(self, search_path: pathlib.Path = pathlib.Path(".")):
-        """Runs the whole YOLO dataset export for all classes."""
-        paths = self.find_paths_with_jpg_files(search_path)
-        paths.sort()
-        for path in paths:
-            self.export_dir(path)
-        self.write_yaml()
