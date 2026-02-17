@@ -1,12 +1,13 @@
 import pytest
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 from cluster_images import (
     cluster_images_in_directory,
     main,
     parse_timestamp,
     cluster_and_filter_by_class,
+    export_cluster,
 )
 
 
@@ -127,4 +128,33 @@ def test_process_images_aggregates_classes(tmp_path):
     assert (
         len(cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)]))
         == 0
+    )
+
+
+def test_export_cluster_multi_image():
+    exporter = MagicMock()
+    cluster = [
+        (datetime(2023, 1, 1), Path("img1.jpg")),
+        (datetime(2023, 1, 2), Path("img2.jpg")),
+        (datetime(2023, 1, 3), Path("img3.jpg")),
+    ]
+
+    # Test train split (should only export median)
+    export_cluster(exporter, cluster, "class1", "train2023")
+    assert exporter.export_file.call_count == 1
+    exporter.export_file.assert_called_with(
+        child=Path("img2.jpg"), class_name="class1", split="train2023"
+    )
+
+    exporter.export_file.reset_mock()
+
+    # Test val split (should export median, first, last)
+    export_cluster(exporter, cluster, "class1", "val2023")
+    exporter.export_file.assert_has_calls(
+        [
+            call(child=Path("img2.jpg"), class_name="class1", split="val2023"),
+            call(child=Path("img1.jpg"), class_name="class1", split="val2023"),
+            call(child=Path("img3.jpg"), class_name="class1", split="val2023"),
+        ],
+        any_order=False,
     )

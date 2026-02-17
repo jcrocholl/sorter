@@ -104,6 +104,37 @@ def cluster_and_filter_by_class(
     return all_clusters
 
 
+def export_cluster(
+    exporter: YoloExporter,
+    cluster: list[tuple[datetime, Path]],
+    class_name: str,
+    split: str,
+) -> None:
+    """Exports image(s) from a cluster."""
+    # Baseline: Export the median image from each cluster.
+    # TODO: Measure how much recognizer accuracy improves
+    # if we export multiple images per cluster.
+    exporter.export_file(
+        child=cluster[len(cluster) // 2][1],
+        class_name=class_name,
+        split=split,
+    )
+
+    if len(cluster) >= 3 and not split.startswith("train"):
+        # Export the first image of the cluster.
+        exporter.export_file(
+            child=cluster[0][1],
+            class_name=class_name,
+            split=split,
+        )
+        # Export the last image of the cluster.
+        exporter.export_file(
+            child=cluster[-1][1],
+            class_name=class_name,
+            split=split,
+        )
+
+
 def main(argv: list[str]) -> None:
     # Initialize YoloExporter
     exporter = YoloExporter(
@@ -148,11 +179,9 @@ def main(argv: list[str]) -> None:
             # Resolve class name
             class_name = exporter.path_to_class(cluster[0][1].parent)
 
-            # Baseline: Export the median image from each cluster.
-            # TODO: Measure how much recognizer accuracy improves
-            # if we export multiple images per cluster.
-            exporter.export_file(
-                child=cluster[len(cluster) // 2][1],
+            export_cluster(
+                exporter=exporter,
+                cluster=cluster,
                 class_name=class_name,
                 split=f"{set_name}2023",
             )
