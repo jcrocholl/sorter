@@ -148,11 +148,14 @@ def main(argv: list[str]) -> None:
             # Resolve class name
             class_name = exporter.path_to_class(cluster[0][1].parent)
 
-            # Export first and last file of each cluster
-            exporter.export_file(cluster[0][1], class_name, f"{set_name}2023")
-            if len(cluster) > 1:
-                exporter.export_file(cluster[-1][1], class_name, f"{set_name}2023")
-
+            # Baseline: Export the median image from each cluster.
+            # TODO: Measure how much recognizer accuracy improves
+            # if we export multiple images per cluster.
+            exporter.export_file(
+                child=cluster[len(cluster) // 2][1],
+                class_name=class_name,
+                split=f"{set_name}2023",
+            )
             current_cluster_idx += 1
 
     exporter.write_yaml()
