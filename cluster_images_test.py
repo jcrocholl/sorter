@@ -2,7 +2,12 @@ import pytest
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from cluster_images import cluster_images, main, parse_timestamp
+from cluster_images import (
+    cluster_images_in_directory,
+    main,
+    parse_timestamp,
+    cluster_and_filter_by_class,
+)
 
 
 def test_parse_timestamp():
@@ -28,7 +33,7 @@ def test_cluster_images_basic(tmp_path):
     # a and b are 0.5s apart, so they should be clustered if threshold >= 0.5
     # c is 1.5s after b, so it should be in a new cluster
 
-    clusters = cluster_images(tmp_path, gap_threshold_seconds=0.5)
+    clusters = cluster_images_in_directory(tmp_path, gap_threshold_seconds=0.5)
 
     assert len(clusters) == 2
     assert len(clusters[0]) == 2
@@ -39,7 +44,7 @@ def test_cluster_images_basic(tmp_path):
 
 
 def test_cluster_images_no_files(tmp_path):
-    clusters = cluster_images(tmp_path)
+    clusters = cluster_images_in_directory(tmp_path)
     assert clusters == []
 
 
@@ -47,7 +52,7 @@ def test_cluster_images_invalid_filenames(tmp_path):
     (tmp_path / "invalid_name.jpg").touch()
     (tmp_path / "20230523_105352000_a.jpg").touch()
 
-    clusters = cluster_images(tmp_path)
+    clusters = cluster_images_in_directory(tmp_path)
     assert len(clusters) == 1
     assert len(clusters[0]) == 1
     assert clusters[0][0][1] == tmp_path / "20230523_105352000_a.jpg"
@@ -66,7 +71,7 @@ def test_main_with_arguments(tmp_path, capsys):
     with (
         patch("PIL.Image.open") as mock_image_open,
         patch("os.link") as mock_link,
-        patch("cluster_images.MIN_CLUSTERS_PER_DIR", 1),
+        patch("cluster_images.MIN_CLUSTERS_PER_CLASS", 1),
     ):
         mock_image_open.return_value.__enter__.return_value = mock_image
         # Test main with the tmp_path as an argument
@@ -91,3 +96,35 @@ def test_main_no_images(tmp_path, capsys):
 
     captured = capsys.readouterr()
     assert "No images found to cluster." in captured.out
+
+
+def test_process_images_aggregates_classes(tmp_path):
+    # Setup: 2 dirs for same class "broken" with 10 and 15 images (total 25 > 20)
+    (d1 := tmp_path / "root1" / "broken").mkdir(parents=True)
+    (d2 := tmp_path / "root2" / "broken").mkdir(parents=True)
+
+    for i in range(10):
+        (d1 / f"20230523_1000{i:02d}000_a.jpg").touch()
+    for i in range(15):
+        (d2 / f"20230523_1100{i:02d}000_a.jpg").touch()
+
+    # Mock YoloExporter
+    exporter = MagicMock()
+    exporter.find_paths_with_jpg_files.side_effect = lambda p: (
+        [d1] if p == d1.parent else [d2] if p == d2.parent else []
+    )
+    exporter.path_to_class.return_value = "broken"
+
+    # Verify aggregation (25 clusters > MIN_CLUSTERS_PER_CLASS=20)
+    assert (
+        len(cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)]))
+        == 25
+    )
+
+    # Verify filtering (reduce to 10 total < 20)
+    for f in list(d1.glob("*.jpg"))[5:] + list(d2.glob("*.jpg"))[5:]:
+        f.unlink()
+    assert (
+        len(cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)]))
+        == 0
+    )

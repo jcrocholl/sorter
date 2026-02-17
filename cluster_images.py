@@ -2,13 +2,14 @@
 
 """Cluster images into groups based on time gaps between them."""
 
+from collections import defaultdict
 import random
 import sys
 from pathlib import Path
 from datetime import datetime
 from yolo_exporter import YoloExporter
 
-MIN_CLUSTERS_PER_DIR = 20
+MIN_CLUSTERS_PER_CLASS = 20
 
 
 def parse_timestamp(filename: str) -> datetime:
@@ -22,7 +23,7 @@ def parse_timestamp(filename: str) -> datetime:
     return datetime.strptime(ts_str, "%Y%m%d%H%M%S%f")
 
 
-def cluster_images(
+def cluster_images_in_directory(
     input_dir: Path,
     gap_threshold_seconds: float = 0.5,
 ) -> list[list[tuple[datetime, Path]]]:
@@ -77,24 +78,39 @@ def print_summary(sets: dict[str, list], total_clusters: int) -> None:
         )
 
 
+def cluster_and_filter_by_class(
+    exporter: YoloExporter,
+    root_dirs: list[str],
+) -> list[list[tuple[datetime, Path]]]:
+    """Finds images in root_dirs, clusters them, and filters by class count."""
+    clusters_by_class = defaultdict(list)
+
+    for root_dir in root_dirs:
+        for class_dir in exporter.find_paths_with_jpg_files(Path(root_dir)):
+            class_clusters = cluster_images_in_directory(class_dir)
+            class_name = exporter.path_to_class(class_dir)
+            clusters_by_class[class_name].extend(class_clusters)
+
+    all_clusters = []
+    for class_name, clusters in clusters_by_class.items():
+        if len(clusters) < MIN_CLUSTERS_PER_CLASS:
+            print(
+                f"Skipping {class_name} with only {len(clusters)} clusters "
+                f"(min {MIN_CLUSTERS_PER_CLASS})."
+            )
+            continue
+        all_clusters.extend(clusters)
+
+    return all_clusters
+
+
 def main(argv: list[str]) -> None:
     # Initialize YoloExporter
     exporter = YoloExporter(
         input_dir=Path("../dataset/nested"),
         output_dir=Path("../yolo_dataset"),
     )
-
-    args = argv[1:] or ["."]
-    clusters = []
-    for root_dir in args:
-        for class_dir in exporter.find_paths_with_jpg_files(Path(root_dir)):
-            class_clusters = cluster_images(class_dir)
-            if len(class_clusters) < MIN_CLUSTERS_PER_DIR:
-                print(
-                    f"Skipping {class_dir.name} with only {len(class_clusters)} clusters."
-                )
-                continue
-            clusters.extend(class_clusters)
+    clusters = cluster_and_filter_by_class(exporter, argv[1:] or ["."])
 
     # Set seed for reproducibility
     random.seed(42)
