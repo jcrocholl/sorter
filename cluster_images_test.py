@@ -75,12 +75,13 @@ def test_main_with_arguments(tmp_path, capsys):
         patch("cluster_images.MIN_CLUSTERS_PER_CLASS", 1),
     ):
         mock_image_open.return_value.__enter__.return_value = mock_image
-        # Test main with the tmp_path as an argument
-        main(["cluster_images.py", str(tmp_path)])
+        output_dir = tmp_path / "yolo_dataset"
+        main(["cluster_images.py", str(tmp_path), str(output_dir)])
 
         # Verify os.link was called with the correct arguments
         dst = (
-            Path("../yolo_dataset/images/train2023/3001_brick_2x4")
+            tmp_path
+            / "yolo_dataset/images/train2023/3001_brick_2x4"
             / "20230523_105352000_3001_brick_2x4.jpg"
         )
         mock_link.assert_called_once_with(src, dst)
@@ -93,7 +94,8 @@ def test_main_with_arguments(tmp_path, capsys):
 
 def test_main_no_images(tmp_path, capsys):
     # Test main on an empty directory
-    main(["cluster_images.py", str(tmp_path)])
+    output_dir = tmp_path / "yolo_dataset"
+    main(["cluster_images.py", str(tmp_path), str(output_dir)])
 
     captured = capsys.readouterr()
     assert "No images found to cluster." in captured.out
@@ -111,9 +113,15 @@ def test_process_images_aggregates_classes(tmp_path):
 
     # Mock YoloExporter
     exporter = MagicMock()
-    exporter.find_paths_with_jpg_files.side_effect = lambda p: (
-        [d1] if p == d1.parent else [d2] if p == d2.parent else []
-    )
+
+    def side_effect(p):
+        if str(p) == str(d1.parent):
+            return [d1]
+        if str(p) == str(d2.parent):
+            return [d2]
+        return []
+
+    exporter.find_paths_with_jpg_files.side_effect = side_effect
     exporter.path_to_class.return_value = "broken"
 
     # Verify aggregation (25 clusters > MIN_CLUSTERS_PER_CLASS=20)
@@ -179,7 +187,8 @@ def test_per_class_split(tmp_path):
         patch("cluster_images.MIN_CLUSTERS_PER_CLASS", 1),
         patch("cluster_images.YoloExporter", return_value=exporter),
     ):
-        main(["cluster_images.py", str(tmp_path)])
+        output_dir = tmp_path / "yolo_dataset"
+        main(["cluster_images.py", str(tmp_path), str(output_dir)])
 
     # 10 clusters:
     # val target = 10 * 0.25 = 2.5 -> 2

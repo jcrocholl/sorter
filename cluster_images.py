@@ -80,13 +80,13 @@ def print_summary(sets: dict[str, list], total_clusters: int) -> None:
 
 def cluster_and_filter_by_class(
     exporter: YoloExporter,
-    root_dirs: list[str],
+    root_dirs: list[Path],
 ) -> dict[str, list[list[tuple[datetime, Path]]]]:
     """Finds images in root_dirs, clusters them, and filters by class count."""
     clusters_by_class = defaultdict(list)
 
     for root_dir in root_dirs:
-        for class_dir in exporter.find_paths_with_jpg_files(Path(root_dir)):
+        for class_dir in exporter.find_paths_with_jpg_files(root_dir):
             class_clusters = cluster_images_in_directory(class_dir)
             class_name = exporter.path_to_class(class_dir)
             clusters_by_class[class_name].extend(class_clusters)
@@ -136,12 +136,15 @@ def export_cluster(
 
 
 def main(argv: list[str]) -> None:
+    input_dir = Path(argv[1]) if len(argv) > 1 else Path(".")
+    output_dir = Path(argv[2]) if len(argv) > 2 else Path("../yolo_dataset")
+
     # Initialize YoloExporter
     exporter = YoloExporter(
-        input_dir=Path("../dataset/nested"),
-        output_dir=Path("../yolo_dataset"),
+        input_dir=input_dir,
+        output_dir=output_dir,
     )
-    clusters_by_class = cluster_and_filter_by_class(exporter, argv[1:] or ["."])
+    clusters_by_class = cluster_and_filter_by_class(exporter, [input_dir])
 
     # Set seed for reproducibility
     random.seed(42)
