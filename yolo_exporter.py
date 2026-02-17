@@ -85,20 +85,23 @@ class YoloExporter:
             class_id = len(self.class_names)
             self.class_names.append(class_name)
 
-        match = re.search(r"^\d{8}_\d{9}", child.name)
-        if not match:
+        date_match = re.search(r"^\d{8}_\d{9}", child.name)
+        if not date_match:
             print(f"failed to parse date_time numbers from {child.name}")
             return
-        base = match.group(0)
+        base = date_match.group(0)
 
-        try:
-            left = int(re.search(r"_l(\d+)_", child.name).group(1))
-            right = int(re.search(r"_r(\d+)_", child.name).group(1))
-            top = int(re.search(r"_t(\d+)_", child.name).group(1))
-            bottom = int(re.search(r"_b(\d+)_", child.name).group(1))
-        except (AttributeError, ValueError):
-            print("failed to parse l_r_t_b numbers")
+        l_match = re.search(r"_l(\d+)_", child.name)
+        r_match = re.search(r"_r(\d+)_", child.name)
+        t_match = re.search(r"_t(\d+)_", child.name)
+        b_match = re.search(r"_b(\d+)_", child.name)
+        if not (l_match and r_match and t_match and b_match):
+            print(f"failed to parse l_r_t_b numbers from {child.name}")
             return
+        left = int(l_match.group(1))
+        right = int(r_match.group(1))
+        top = int(t_match.group(1))
+        bottom = int(b_match.group(1))
 
         with Image.open(child) as image:
             width = image.width
