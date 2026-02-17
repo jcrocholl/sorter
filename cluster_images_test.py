@@ -117,18 +117,15 @@ def test_process_images_aggregates_classes(tmp_path):
     exporter.path_to_class.return_value = "broken"
 
     # Verify aggregation (25 clusters > MIN_CLUSTERS_PER_CLASS=20)
-    assert (
-        len(cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)]))
-        == 25
-    )
+    result = cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)])
+    assert len(result["broken"]) == 25
 
     # Verify filtering (reduce to 10 total < 20)
     for f in list(d1.glob("*.jpg"))[5:] + list(d2.glob("*.jpg"))[5:]:
         f.unlink()
-    assert (
-        len(cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)]))
-        == 0
-    )
+
+    result = cluster_and_filter_by_class(exporter, [str(d1.parent), str(d2.parent)])
+    assert "broken" not in result
 
 
 def test_export_cluster_multi_image():
@@ -158,3 +155,48 @@ def test_export_cluster_multi_image():
         ],
         any_order=False,
     )
+
+
+def test_per_class_split(tmp_path):
+    # Create valid class directory and images
+    class_dir = tmp_path / "class_a"
+    class_dir.mkdir()
+    # create 10 clusters, each with 3 images
+    for i in range(10):
+        for j in range(3):
+            # 1 ms gap between images in same cluster
+            # 1 min gap between clusters
+            ts = f"20230523_10{i:02d}00{j:03d}"
+            (class_dir / f"{ts}_foo.jpg").touch()
+
+    # Mock exporter
+    exporter = MagicMock()
+    exporter.find_paths_with_jpg_files.return_value = [class_dir]
+    exporter.path_to_class.return_value = "class_a"
+
+    # Mock MIN_CLUSTERS_PER_CLASS to allow small number of clusters
+    with (
+        patch("cluster_images.MIN_CLUSTERS_PER_CLASS", 1),
+        patch("cluster_images.YoloExporter", return_value=exporter),
+    ):
+        main(["cluster_images.py", str(tmp_path)])
+
+    # 10 clusters:
+    # val target = 10 * 0.25 = 2.5 -> 2
+    # test target = 10 * 0.25 = 2.5 -> 2
+    # train target = remaining = 6
+
+    # Check that export_file was called with correct splits
+    splits = [c.kwargs["split"] for c in exporter.export_file.call_args_list]
+    assert (
+        splits.count("val2023") >= 2
+    )  # At least 2, could be more due to multi-image export
+    assert splits.count("test2023") >= 2
+    assert splits.count("train2023") == 6  # Train only exports 1 image per cluster
+
+    # Verify basic split assignment logic (approximate check via string counts)
+    # val: 2 clusters -> 6 export calls (median + first + last)
+    # test: 2 clusters -> 6 export calls
+    # train: 6 clusters -> 6 export calls
+    # Total calls = 18
+    assert exporter.export_file.call_count == 18

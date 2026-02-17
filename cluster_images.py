@@ -81,7 +81,7 @@ def print_summary(sets: dict[str, list], total_clusters: int) -> None:
 def cluster_and_filter_by_class(
     exporter: YoloExporter,
     root_dirs: list[str],
-) -> list[list[tuple[datetime, Path]]]:
+) -> dict[str, list[list[tuple[datetime, Path]]]]:
     """Finds images in root_dirs, clusters them, and filters by class count."""
     clusters_by_class = defaultdict(list)
 
@@ -91,7 +91,7 @@ def cluster_and_filter_by_class(
             class_name = exporter.path_to_class(class_dir)
             clusters_by_class[class_name].extend(class_clusters)
 
-    all_clusters = []
+    filtered_clusters = {}
     for class_name, clusters in clusters_by_class.items():
         if len(clusters) < MIN_CLUSTERS_PER_CLASS:
             print(
@@ -99,9 +99,9 @@ def cluster_and_filter_by_class(
                 f"(min {MIN_CLUSTERS_PER_CLASS})."
             )
             continue
-        all_clusters.extend(clusters)
+        filtered_clusters[class_name] = clusters
 
-    return all_clusters
+    return filtered_clusters
 
 
 def export_cluster(
@@ -141,51 +141,53 @@ def main(argv: list[str]) -> None:
         input_dir=Path("../dataset/nested"),
         output_dir=Path("../yolo_dataset"),
     )
-    clusters = cluster_and_filter_by_class(exporter, argv[1:] or ["."])
+    clusters_by_class = cluster_and_filter_by_class(exporter, argv[1:] or ["."])
 
     # Set seed for reproducibility
     random.seed(42)
-    # Shuffle clusters for random allocation
-    random.shuffle(clusters)
 
-    total_clusters = len(clusters)
+    total_clusters = sum(len(c) for c in clusters_by_class.values())
     if total_clusters == 0:
         print("No images found to cluster.")
         return
 
-    total_images = sum(len(c) for c in clusters)
+    total_images = sum(
+        sum(len(c) for c in clusters) for clusters in clusters_by_class.values()
+    )
     print(f"total clusters: {total_clusters}")
     print(f"total images: {total_images}")
     print("-" * 50)
 
-    # Allocate clusters to sets and call YoloExporter
-    val_target = int(total_clusters * 0.25)
-    test_target = int(total_clusters * 0.25)
-
     sets = {"train": [], "val": [], "test": []}
-    current_cluster_idx = 0
 
-    for set_name, target in [
-        ("val", val_target),
-        ("test", test_target),
-        ("train", total_clusters),  # rest
-    ]:
-        for _ in range(target):
-            if current_cluster_idx >= total_clusters:
-                break
-            cluster = clusters[current_cluster_idx]
-            sets[set_name].append(cluster)
+    for class_name, clusters in clusters_by_class.items():
+        # Shuffle clusters for random allocation
+        random.shuffle(clusters)
 
-            # Resolve class name
-            class_name = exporter.path_to_class(cluster[0][1].parent)
+        num_clusters = len(clusters)
+        val_target = int(num_clusters * 0.25)
+        test_target = int(num_clusters * 0.25)
 
-            export_cluster(
-                exporter=exporter,
-                cluster=cluster,
-                class_name=class_name,
-                split=f"{set_name}2023",
-            )
-            current_cluster_idx += 1
+        current_cluster_idx = 0
+
+        for set_name, target in [
+            ("val", val_target),
+            ("test", test_target),
+            ("train", num_clusters),  # rest
+        ]:
+            for _ in range(target):
+                if current_cluster_idx >= num_clusters:
+                    break
+                cluster = clusters[current_cluster_idx]
+                sets[set_name].append(cluster)
+
+                export_cluster(
+                    exporter=exporter,
+                    cluster=cluster,
+                    class_name=class_name,
+                    split=f"{set_name}2023",
+                )
+                current_cluster_idx += 1
 
     exporter.write_yaml()
     print_summary(sets, total_clusters)
