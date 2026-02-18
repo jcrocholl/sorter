@@ -20,17 +20,17 @@ class Histogram:
         self.regex = re.compile(regex)
         self.count = defaultdict(int)
         self.total = 0
-        self.min = None
-        self.max = None
+        self.min = 1_000_000
+        self.max = -1_000_000
         for filename in self.filenames():
             match = self.regex.search(filename)
             if match:
                 n = int(match.group(1))
                 self.count[n] += 1
                 self.total += 1
-                if self.min is None or n < self.min:
+                if n < self.min:
                     self.min = n
-                if self.max is None or n > self.max:
+                if n > self.max:
                     self.max = n
 
     def filenames(self, dirname=".", ext=".jpg") -> Iterable[str]:
@@ -77,8 +77,8 @@ class Histogram:
         temp = "/tmp/" + os.path.basename(filename)
         im = cv2.imread(filename)
         # Draw rectangle for on-screen debugging.
-        pattern = r"l(\d+)_r(\d+)_t(\d+)_b(\d+)_w(\d+)_h(\d+)"
-        match = re.search(pattern, filename)
+        match = re.search(r"l(\d+)_r(\d+)_t(\d+)_b(\d+)_w(\d+)_h(\d+)", filename)
+        assert match
         left = int(match.group(1))
         right = int(match.group(2))
         top = int(match.group(3))
@@ -93,14 +93,20 @@ class Histogram:
 
     def feh(self, filenames: list[str]):
         """Human review for outliers, use C-Del to remove bad examples."""
-        args = "--auto-zoom --g 2000x2000 --on-last-slide quit"
-        feh = f"/usr/bin/feh {args}".split()
+        feh = [
+            "/usr/bin/feh",
+            "--auto-zoom",
+            "--g",
+            "2000x2000",
+            "--on-last-slide",
+            "quit",
+        ]
         pairs = [
             (original, self.bbox(original))
             for original in filenames
             if os.path.exists(original)  # It may have been deleted.
         ]
-        feh.extend([bbox for original, bbox in pairs])
+        feh.extend([bbox for (_, bbox) in pairs])
         subprocess.run(feh, check=True)
         num_deleted = 0
         for original, bbox in pairs:

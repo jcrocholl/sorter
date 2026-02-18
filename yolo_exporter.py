@@ -91,17 +91,14 @@ class YoloExporter:
             return
         base = date_match.group(0)
 
-        l_match = re.search(r"_l(\d+)_", child.name)
-        r_match = re.search(r"_r(\d+)_", child.name)
-        t_match = re.search(r"_t(\d+)_", child.name)
-        b_match = re.search(r"_b(\d+)_", child.name)
-        if not (l_match and r_match and t_match and b_match):
+        bbox_match = re.search(r"_l(\d+)_r(\d+)_t(\d+)_b(\d+)_", child.name)
+        if not bbox_match:
             print(f"failed to parse l_r_t_b numbers from {child.name}")
             return
-        left = int(l_match.group(1))
-        right = int(r_match.group(1))
-        top = int(t_match.group(1))
-        bottom = int(b_match.group(1))
+        left = int(bbox_match.group(1))
+        right = int(bbox_match.group(2))
+        top = int(bbox_match.group(3))
+        bottom = int(bbox_match.group(4))
 
         with Image.open(child) as image:
             width = image.width

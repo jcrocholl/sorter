@@ -37,9 +37,4 @@ def test_servo_controller_send_angle():
 
     # Row 7 is channel 7 + 5 = 12 (since row > 5)
     channel = 12
-
-    pca_b.pwm_regs.__setitem__.assert_called_once()
-    args, _ = pca_b.pwm_regs.__setitem__.call_args
-    assert args[0] == channel
-    assert isinstance(args[1], tuple)
-    assert args[1] == (2047, 2354)
+    MagicMock.assert_called_once_with(pca_b.pwm_regs.__setitem__, channel, (2047, 2354))
