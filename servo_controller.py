@@ -27,10 +27,8 @@ class ServoController:
 
         self.row_channels: dict[int, int] = {}
         for row in range(1, num_rows + 1):
-            if row <= 5:  # 1 2 3 4 5 on the first cable
-                self.row_channels[row] = row
-            else:  # 11 12 13 14 15 on the second cable
-                self.row_channels[row] = row + 5
+            # Row goes from 1 to num_rows, channel goes 0 to 15
+            self.row_channels[row] = row - 1
 
     def send_angle(self, cell: Cell, angle: float) -> None:
         """Sends a new angle to the servo for this cell."""
@@ -40,8 +38,10 @@ class ServoController:
         # Calculate pulse width for the new servo angle.
         microsec = 600 + 1800 * angle / 180
         # Distribute rising edges across the duty cycle.
-        on = int(0xFFF * (channel % 8) / 8)  # 8 signals per cable.
-        off = int(on + 0xFFF * microsec / self.period)
+        on = int(0xFFF * channel / 16) % 0xFFF
+        # Tested on 2026-02-22: it's acceptable for the off time to wrap
+        # around into the next cycle, as long as 0<=off<0xFFF.
+        off = int(on + 0xFFF * microsec / self.period) % 0xFFF
         # Send new 12-bit values for on/off time over I2C.
         pca.pwm_regs[channel] = (on, off)
 

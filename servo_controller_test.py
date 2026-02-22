@@ -35,6 +35,6 @@ def test_servo_controller_send_angle():
     # Verify correct channel update on the correct PCA9685 instance
     pca_b = sc.column_controllers["B"]
 
-    # Row 7 is channel 7 + 5 = 12 (since row > 5)
-    channel = 12
-    MagicMock.assert_called_once_with(pca_b.pwm_regs.__setitem__, channel, (2047, 2354))
+    # Row 7 is channel 6 (zero-based)
+    channel = 6
+    MagicMock.assert_called_once_with(pca_b.pwm_regs.__setitem__, channel, (1535, 1842))
