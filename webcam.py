@@ -69,7 +69,7 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 count = 0
 timestamps = []
 while True:
-    success, im = cap.read()
+    success, img = cap.read()
     if not success:
         print("failed to read from VideoCapture")
         break
@@ -79,10 +79,10 @@ while True:
         adjust_webcam(CAM)
 
     # Bricks should move towards the camera, top to bottom:
-    im = cv2.rotate(im, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    image_height, image_width, image_channels = im.shape
+    img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    image_height, image_width, image_channels = img.shape
 
-    hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     hue, saturation, value = cv2.split(hsv)
     gray = cv2.max(saturation, 255 - value)
 
@@ -112,21 +112,25 @@ while True:
             f"{DIR}/{now}_l{x}_r{x + width}_t{y}_b{y + height}_w{width}_h{height}.jpg"
         )
         print(filename)
-        cv2.imwrite(filename, im)
+        cv2.imwrite(filename, img)
 
     # Draw rectangle for on-screen debugging, green means saving to disk.
     color = GREEN if save else BLUE
-    cv2.rectangle(im, (x, y), (x + width, y + height), color, 3)
+    cv2.rectangle(img, (x, y), (x + width, y + height), color=color, thickness=3)
 
     left = cv2.cvtColor(cv2.vconcat([blur, thresh]), cv2.COLOR_GRAY2BGR)
-    right = im
+    right = img
     # Uncomment the following line to make the preview window bigger:
     # right = cv2.resize(
-    #     im, (image_width * 2, image_height * 2), cv2.INTER_CUBIC
+    #     img, (image_width * 2, image_height * 2), cv2.INTER_CUBIC
     # )
     lh, lw, lc = left.shape
     rh, rw, rc = right.shape
-    left = cv2.resize(left, (lw * rh // lh, rh), cv2.INTER_CUBIC)
+    left = cv2.resize(
+        src=left,
+        dsize=(lw * rh // lh, rh),
+        interpolation=cv2.INTER_CUBIC,
+    )
     preview = cv2.hconcat([left, right])
     cv2.imshow(DIR, preview)
 

@@ -75,7 +75,8 @@ class Histogram:
     def bbox(self, filename: str) -> str:
         """Returns a temporary image with bounding box."""
         temp = "/tmp/" + os.path.basename(filename)
-        im = cv2.imread(filename)
+        img = cv2.imread(filename)
+        assert img, f"failed to read image from {filename}"
         # Draw rectangle for on-screen debugging.
         match = re.search(r"l(\d+)_r(\d+)_t(\d+)_b(\d+)_w(\d+)_h(\d+)", filename)
         assert match
@@ -87,8 +88,8 @@ class Histogram:
         height = int(match.group(6))
         assert width == right - left
         assert height == bottom - top
-        cv2.rectangle(im, (left, top), (right, bottom), BLUE, 3)
-        cv2.imwrite(temp, im)
+        cv2.rectangle(img, (left, top), (right, bottom), color=BLUE, thickness=3)
+        assert cv2.imwrite(filename=temp, img=img), f"failed to write image to {temp}"
         return temp
 
     def feh(self, filenames: list[str]):
