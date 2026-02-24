@@ -1,0 +1,18 @@
+[project]
+name = "sorter"
+version = "0.1.0"
+description = "An automatic sorting shelf for colored plastic bricks"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "adafruit-circuitpython-pca9685>=3.4.20",
+    "opencv-contrib-python>=4.13.0.92",
+    "pillow>=12.1.1",
+]
+
+[dependency-groups]
+dev = [
+    "pyrefly>=0.54.0",
+    "pytest>=9.0.2",
+    "ruff>=0.15.2",
+]
