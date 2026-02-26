@@ -2,56 +2,42 @@
 
 """Send updates to 16 servo channels, for testing PWM hardware and cables."""
 
-from cell import Cell
-from servo_controller import ServoController
+import adafruit_pca9685
+import board
+import busio
+
+import servo_channel
+import servo_controller
 
 
 def main():
-    # Use 1 column and 16 rows to test all channels on one PCA9685.
-    # This corresponds to PCA9685 address 0x41 and channels 0-15.
-    num_cols = 1
-    num_rows = 16
-
-    print(
-        f"Initializing ServoController with {num_cols} columns and {num_rows} rows..."
-    )
-    sc = ServoController(num_columns=num_cols, num_rows=num_rows)
-
     step = 5
-    # Sequence of angles: 90 -> 180, then 0 -> 90
-    angles = list(range(90, 180 + step, step))
-    angles += list(range(0, 90 + step, step))
+    angles = list(range(0, 180 + step, step))
 
-    print("Starting servo loop. Press Ctrl+C to stop.")
+    i2c = busio.I2C(board.SCL, board.SDA)
+    pca = adafruit_pca9685.PCA9685(i2c, address=0x41)
+    controller = servo_controller.ServoController(pca=pca)
+    servos = servo_channel.parse_ranges("A1:A16", controller)
+
     offset = 0
+    print("Starting servo loop. Press Ctrl+C to stop.")
     try:
         while True:
             offset += 1
-            for col_idx in range(1, num_cols + 1):
-                col = Cell.int_to_col(col_idx)
-                for row in range(1, num_rows + 1):
-                    cell = Cell(col, row)
+            for servo in servos:
+                # Stagger the angles for each servo to distribute current draw.
+                angle = angles[(offset + servo.channel * 4) % len(angles)]
 
-                    # Stagger the angles for each servo to distribute current draw.
-                    # idx calculation matches channel distribution logic.
-                    idx = (col_idx - 1) * num_rows + (row - 1)
-                    angle = angles[(offset + idx * 4) % len(angles)]
+                # Print debug info for the first cell.
+                if servo.col == "A" and servo.row == 1:
+                    print(f"Servo {servo} angle={angle:3d}", end="\r")
 
-                    # Print debug info for the first cell
-                    if col == "A" and row == 1:
-                        print(f"Cell {cell} angle={angle:3d}", end="\r")
-
-                    sc.send_angle(cell, angle)
+                servo.send_angle(angle)
     except KeyboardInterrupt:
         print("\nStopping servo demo...")
     finally:
-        # Properly de-initialize all PCA9685 instances.
         print("De-initializing controllers...")
-        for col, pca in sc.column_controllers.items():
-            try:
-                pca.deinit()
-            except Exception as e:
-                print(f"Error de-initializing column {col}: {e}")
+        pca.deinit()
 
 
 if __name__ == "__main__":

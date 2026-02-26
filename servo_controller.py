@@ -1,54 +1,41 @@
-import adafruit_pca9685
-import board
-import busio
-from cell import Cell
+from typing import Any
 
 
 class ServoController:
-    """Controls servos for a grid of cells."""
+    """Interface for a multi-channel PWM servo controller."""
 
-    def __init__(self, num_columns, num_rows) -> None:
-        self.num_columns = num_columns
-        self.num_rows = num_rows
-        self.frequency = 50  # Hz
-        self.period = 1_000_000 / self.frequency  # microsec
+    def __init__(
+        self,
+        pca: Any,  # Real PCA9685 or MagicMock.
+        frequency: float = 50.0,  # Hz
+        num_channels: int = 16,
+    ) -> None:
+        self.pca = pca
+        self.frequency = frequency
+        self.num_channels = num_channels
+        self.send_frequency()
 
-        self.i2c = busio.I2C(
-            board.SCL,  # ty: ignore[possibly-missing-attribute]
-            board.SDA,  # ty: ignore[possibly-missing-attribute]
-        )
+    def send_frequency(self) -> None:
+        """Transmit frequency setting over I2C."""
+        assert 40 < self.frequency < 200  # Hz
+        self.pca.frequency = self.frequency
 
-        self.column_controllers: dict[str, adafruit_pca9685.PCA9685] = {}
-        for i in range(1, num_columns + 1):
-            col = Cell.int_to_col(i)
-            pca = adafruit_pca9685.PCA9685(self.i2c, address=0x40 + i)
-            pca.frequency = self.frequency
-            self.column_controllers[col] = pca
+    def send_pwm_regs(self, channel: int, on: int, off: int) -> None:
+        """Transmit new 12-bit values for on/off duty cycle over I2C."""
+        assert 0 <= channel < self.num_channels
+        assert 0 <= on < 0xFFF
+        assert 0 <= off < 0xFFF
+        self.pca.pwm_regs[channel] = (on, off)
 
-        self.row_channels: dict[int, int] = {}
-        for row in range(1, num_rows + 1):
-            # Row goes from 1 to num_rows, channel goes 0 to 15
-            self.row_channels[row] = row - 1
-
-    def send_angle(self, cell: Cell, angle: float) -> None:
-        """Sends a new angle to the servo for this cell."""
-        # Find the I2C device and channel for this cell.
-        pca = self.column_controllers[cell.col]
-        channel = self.row_channels[cell.row]
-        # Calculate pulse width for the new servo angle.
-        microsec = 600 + 1800 * angle / 180
+    def send_angle(self, channel: int, angle: float) -> None:
+        """Send a new angle for this servo."""
+        pulse_usec = 600 + 1800 * angle / 180
+        period_usec = 1_000_000 / self.frequency
+        print(f"pulse={pulse_usec}us period={period_usec}us")
         # Distribute rising edges across the duty cycle.
         on = int(0xFFF * channel / 16) % 0xFFF
         # Tested on 2026-02-22: it's acceptable for the off time to wrap
-        # around into the next cycle, as long as 0<=off<0xFFF.
-        off = int(on + 0xFFF * microsec / self.period) % 0xFFF
-        # Send new 12-bit values for on/off time over I2C.
-        pca.pwm_regs[channel] = (on, off)
-
-    def open(self, cell: Cell) -> None:
-        """Opens the servo flap for this cell."""
-        self.send_angle(cell, 135)
-
-    def close(self, cell: Cell) -> None:
-        """Closes the servo flap for this cell."""
-        self.send_angle(cell, 90)
+        # around into the next cycle (as long as 0 <= off < 0xFFF).
+        off = int(on + 0xFFF * pulse_usec / period_usec) % 0xFFF
+        print(f"on={on} off={off} 0xFFF={0xFFF}")
+        self.send_pwm_regs(channel, on, off)

@@ -1,40 +1,20 @@
-import sys
 from unittest.mock import MagicMock
-
-# Create and inject mocks before importing the module under test
-mock_adafruit = MagicMock()
-mock_pca = MagicMock()
-mock_adafruit.PCA9685.return_value = mock_pca
-
-sys.modules["adafruit_pca9685"] = mock_adafruit
-sys.modules["board"] = MagicMock()
-sys.modules["busio"] = MagicMock()
-
-# Now we can safely import the controller
-from servo_controller import ServoController  # noqa: E402
-from cell import Cell  # noqa: E402
+from servo_controller import ServoController
 
 
 def test_servo_controller_init():
-    # Verify it creates the right number of PCA9685 instances
-    sc = ServoController(num_columns=2, num_rows=10)
-
-    # Should have created 2 controllers (for col A and B)
-    assert mock_adafruit.PCA9685.call_count == 2
-    # Verify address calculation (0x40 + 1, 0x40 + 2)
-    mock_adafruit.PCA9685.assert_any_call(sc.i2c, address=0x41)
-    mock_adafruit.PCA9685.assert_any_call(sc.i2c, address=0x42)
+    pca = MagicMock()
+    sc = ServoController(pca, frequency=60.0)
+    assert sc.num_channels == 16
+    assert pca.frequency == 60.0
 
 
 def test_servo_controller_send_angle():
-    sc = ServoController(num_columns=2, num_rows=10)
-    cell = Cell("B", 7)
-    sc.send_angle(cell, 90)
-
-    # Cell B is column 2 (address 0x42), which is sc.column_controllers["B"]
-    # Verify correct channel update on the correct PCA9685 instance
-    pca_b = sc.column_controllers["B"]
-
-    # Row 7 is channel 6 (zero-based)
-    channel = 6
-    MagicMock.assert_called_once_with(pca_b.pwm_regs.__setitem__, channel, (1535, 1842))
+    pca = MagicMock()
+    sc = ServoController(pca)
+    sc.send_angle(channel=6, angle=45)
+    MagicMock.assert_called_once_with(
+        pca.pwm_regs.__setitem__,
+        6,
+        (1535, 1749),
+    )
