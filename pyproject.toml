@@ -17,3 +17,14 @@ dev = [
     "ruff>=0.15.2",
     "typeguard>=4.5.1",
 ]
+
+[tool.pytest.ini_options]
+typeguard-packages = """
+    cluster_images
+    outliers
+    servo_channel
+    servo_controller
+    servo_demo
+    webcam
+    yolo_exporter
+"""
