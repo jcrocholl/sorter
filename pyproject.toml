@@ -15,4 +15,5 @@ dev = [
     "pyrefly>=0.54.0",
     "pytest>=9.0.2",
     "ruff>=0.15.2",
+    "typeguard>=4.5.1",
 ]
