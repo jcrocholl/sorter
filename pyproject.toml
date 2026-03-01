@@ -20,11 +20,13 @@ dev = [
 
 [tool.pytest.ini_options]
 typeguard-packages = """
+    brick_mapping
     cluster_images
     outliers
     servo_channel
     servo_controller
     servo_demo
+    servo_shelf
     webcam
     yolo_exporter
 """
