@@ -23,6 +23,7 @@ dev = [
 typeguard-packages = """
     brick_mapping
     cluster_images
+    conveyor_belt
     outliers
     servo_channel
     servo_controller
