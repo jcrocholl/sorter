@@ -53,9 +53,9 @@ def test_conveyor_belt_speed_averaging():
     belt.observed_mark_at("m", 2.0)  # 1 interval, speed 0 (below min)
     assert belt.speed == 0.0
 
-    belt.observed_mark_at("m", 3.0)  # 2nd interval (1.0). Avg = 1.5
-    # Speed = 1000 / 1.5 = 666.66...
-    assert belt.speed == pytest.approx(666.666, rel=1e-3)
+    belt.observed_mark_at("m", 3.6)  # 2nd interval (1.6). Avg = 1.8
+    # Speed = 1000 / 1.8 = 555.55...
+    assert belt.speed == pytest.approx(555.555, rel=1e-3)
 
 
 def test_conveyor_belt_predict_travel_time():
@@ -89,4 +89,22 @@ def test_conveyor_belt_max_intervals():
     # Intervals: 1 (0-1), 1 (1-2), ... 1 (8-9) -> Total 9 intervals
     # After pruning with while loop in observed_mark_at: should be 5 intervals
     assert len(belt._intervals) == 5
+    assert belt.speed == 1000.0
+
+
+def test_conveyor_belt_outlier_rejection():
+    # length 1000, min_intervals 3
+    belt = ConveyorBelt(length=1000, min_intervals=3)
+    belt.observed_mark_at("m", 0)
+    belt.observed_mark_at("m", 1)  # Interval 1.0
+    belt.observed_mark_at("m", 2)  # Interval 1.0
+    belt.observed_mark_at("m", 3)  # Interval 1.0 (median 1.0)
+    assert belt.speed == 1000.0
+
+    # Add an outlier (0.7s is < 3/4 * median)
+    belt.observed_mark_at("m", 3.7)  # Interval 0.7
+    assert belt.speed == 1000.0
+
+    # Add another outlier (1.4s is > 4/3 * median)
+    belt.observed_mark_at("m", 5.1)  # Interval 1.4
     assert belt.speed == 1000.0

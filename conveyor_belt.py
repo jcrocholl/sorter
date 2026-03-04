@@ -1,3 +1,6 @@
+import statistics
+
+
 class ConveyorBelt:
     """Tracks the speed of a conveyor belt and predicts object arrival times."""
 
@@ -12,7 +15,7 @@ class ConveyorBelt:
 
         Args:
             length: Total belt length in millimeters (mm).
-            min_intervals: Minimum number of intervals to consider the belt calibrated.
+            min_intervals: Minimum number of intervals to make predictions.
             max_intervals: Maximum number of intervals to keep for calibration.
         """
         self.length = length
@@ -47,13 +50,24 @@ class ConveyorBelt:
         """
         Returns the current belt speed in millimeters per second (mm/s).
 
+        Discards obvious outliers (intervals outside [3/4, 4/3] * median).
+
         Returns:
             Current speed, or 0.0 if not enough calibration data is available.
         """
         if len(self._intervals) < self._min_intervals:
             return 0.0
 
-        avg_interval = sum(self._intervals) / len(self._intervals)
+        # Discard obvious outliers using the median.
+        median = statistics.median(self._intervals)
+        below = 3 / 4 * median
+        above = 4 / 3 * median
+        clean_intervals = [i for i in self._intervals if below < i < above]
+
+        if len(clean_intervals) < self._min_intervals:
+            return 0.0
+
+        avg_interval = statistics.mean(clean_intervals)
         if avg_interval <= 0:
             return 0.0
 
@@ -67,7 +81,7 @@ class ConveyorBelt:
             distance: Distance to travel in millimeters (mm).
 
         Returns:
-            Travel time in seconds (s). Returns 0.0 if not enough calibration data.
+            Travel time in seconds (s), or 0.0 if not enough calibration data.
         """
         current_speed = self.speed
         if current_speed <= 0:
