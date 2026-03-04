@@ -1,20 +1,25 @@
-from collections import defaultdict
-
-
 class ConveyorBelt:
     """Tracks the speed of a conveyor belt and predicts object arrival times."""
 
-    def __init__(self, length: float) -> None:
+    def __init__(
+        self,
+        length: float,
+        min_intervals: int = 3,
+        max_intervals: int = 10,
+    ) -> None:
         """
         Initialize the conveyor belt.
 
         Args:
             length: Total belt length in millimeters (mm).
+            min_intervals: Minimum number of intervals to consider the belt calibrated.
+            max_intervals: Maximum number of intervals to keep for calibration.
         """
         self.length = length
-        self._marks = defaultdict(list)
-        self._intervals = []
-        self._max_intervals = 5
+        self._min_intervals = min_intervals
+        self._max_intervals = max_intervals
+        self._last_seen: dict[str, float] = {}
+        self._intervals: list[float] = []
 
     def observed_mark_at(self, mark: str, timestamp: float) -> None:
         """
@@ -24,21 +29,18 @@ class ConveyorBelt:
             mark: Name of the recognizer class for the mark.
             timestamp: Time (seconds) when the mark passed the camera mid-line.
         """
-        marks = self._marks[mark]
-        if marks:
+        last_timestamp = self._last_seen.get(mark)
+        if last_timestamp is not None:
             # Calculate interval between subsequent sightings of the same mark.
             # One interval represents one full rotation of the belt.
-            interval = timestamp - marks[-1]
+            interval = timestamp - last_timestamp
             if interval > 0:
                 self._intervals.append(interval)
                 # Keep only the most recent intervals.
-                if len(self._intervals) > self._max_intervals:
+                while len(self._intervals) > self._max_intervals:
                     self._intervals.pop(0)
 
-        marks.append(timestamp)
-        # We only really need the last timestamp for each mark to calculate the next interval.
-        if len(marks) > 2:
-            self._marks[mark] = marks[-2:]
+        self._last_seen[mark] = timestamp
 
     @property
     def speed(self) -> float:
@@ -48,7 +50,7 @@ class ConveyorBelt:
         Returns:
             Current speed, or 0.0 if not enough calibration data is available.
         """
-        if not self._intervals:
+        if len(self._intervals) < self._min_intervals:
             return 0.0
 
         avg_interval = sum(self._intervals) / len(self._intervals)
