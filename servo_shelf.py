@@ -11,6 +11,13 @@ class ServoShelf:
         config: dict[int, str],
         pca_factory: Callable[[int], Any],
     ) -> None:
+        """Initialize the sorting shelf with a configuration.
+
+        The config is a dictionary where each key is the I2C address (int) of a
+        PCA9685 controller, and each value is a space-separated string of ranges
+        for servo channels (e.g., "A1:A10 B1:B5"). Servo channels are assigned
+        sequentially starting from 0 for each controller.
+        """
         self.controllers: dict[int, ServoController] = {}
         self.servos: dict[str, ServoChannel] = {}
 
