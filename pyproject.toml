@@ -8,6 +8,7 @@ dependencies = [
     "adafruit-circuitpython-pca9685>=3.4.20",
     "opencv-contrib-python>=4.13.0.92",
     "pillow>=12.1.1",
+    "yolov7detect>=1.0.1",
 ]
 
 [dependency-groups]
@@ -21,6 +22,7 @@ dev = [
 
 [tool.pytest.ini_options]
 typeguard-packages = """
+    brick_camera
     brick_mapping
     cluster_images
     conveyor_belt
