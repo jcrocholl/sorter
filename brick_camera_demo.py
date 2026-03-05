@@ -141,20 +141,16 @@ def main() -> None:
     targets_np = np.array(all_targets) if all_targets else np.zeros((0, 6))
 
     # plot_images returns the mosaic as an RGB numpy array.
+    mosaic_path = "../mosaic.jpg"
     mosaic = plot_images(
         images=images_np,
         targets=targets_np,
         names=model.names,
+        fname=mosaic_path,
     )
 
     # Convert back to BGR for OpenCV display.
     mosaic_bgr = cv2.cvtColor(mosaic, cv2.COLOR_RGB2BGR)
-
-    # Save the resulting mosaic image.
-    mosaic_path = "../mosaic.jpg"
-    cv2.imwrite(mosaic_path, mosaic_bgr)
-    print(f"Mosaic saved to {mosaic_path}")
-
     cv2.imshow("BrickCamera Mosaic", mosaic_bgr)
     print("Mosaic displayed. Press any key to quit.")
     cv2.waitKey(0)
