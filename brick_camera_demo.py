@@ -13,7 +13,6 @@ from brick_camera import BrickCamera
 
 
 def main() -> None:
-    # Load the real YOLOv7 weights.
     weights_path = "yolov7-tiny.pt"
     if not Path(weights_path).exists():
         print(f"Error: {weights_path} not found.")
@@ -33,12 +32,15 @@ def main() -> None:
         model = yolov7.load(
             weights_path,
             device="cpu",  # Cannot load to MPS directly.
-            size=640,  # Same as training.
-            # TODO: Half precision inference latency > 1.8 seconds per image.
+            # size=640,  # Same as training.
             # half=True,  # Use half-precision for speed.
         )
+        if torch.cuda.is_available():
+            print("Moving model to CUDA...")
+            device = torch.device("cuda")
+            model = model.to(device)
         # TODO: Bounding boxes appear to be corrupted on Mac?
-        # if torch.backends.mps.is_available():
+        # elif torch.backends.mps.is_available():
         #     print("Moving model to MPS...")
         #     model = model.to("mps")
     finally:

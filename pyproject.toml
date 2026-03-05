@@ -8,7 +8,9 @@ dependencies = [
     "adafruit-circuitpython-pca9685>=3.4.20",
     "opencv-contrib-python>=4.13.0.92",
     "pillow>=12.1.1",
+    "setuptools<=69.5.1",
     "yolov7detect>=1.0.1",
+    "yolov9pip>=0.0.4",
 ]
 
 [dependency-groups]
