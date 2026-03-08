@@ -1,5 +1,7 @@
 from typing import Any
 
+DEBUG = False
+
 
 class ServoController:
     """Interface for a multi-channel PWM servo controller."""
@@ -31,11 +33,14 @@ class ServoController:
         """Send a new angle for this servo."""
         pulse_usec = 600 + 1800 * angle / 180
         period_usec = 1_000_000 / self.frequency
-        print(f"pulse={pulse_usec}us period={period_usec}us")
         # Distribute rising edges across the duty cycle.
         on = int(0xFFF * channel / 16) % 0xFFF
         # Tested on 2026-02-22: it's acceptable for the off time to wrap
         # around into the next cycle (as long as 0 <= off < 0xFFF).
         off = int(on + 0xFFF * pulse_usec / period_usec) % 0xFFF
-        print(f"on={on} off={off} 0xFFF={0xFFF}")
+        if DEBUG:
+            print(
+                f"pulse={pulse_usec}us period={period_usec}us"
+                f" on={on} off={off} 0xFFF={0xFFF}"
+            )
         self.send_pwm_regs(channel, on, off)
