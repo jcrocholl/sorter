@@ -34,8 +34,12 @@ allowed-licenses = [
   "BSD 3-clause License",
   "CMU License (MIT-CMU)",
   "ISC License",
+  "LicenseRef-NVIDIA-Proprietary",
+  "LicenseRef-NVIDIA-Software-License",
   "MIT",
   "Mozilla Public License 2.0 (MPL 2.0)",
+  "NVIDIA Proprietary Software",
+  "Other/Proprietary License",  # NVIDIA
   "Python Software Foundation License",
   "Python Software Foundation License v2",
 ]
