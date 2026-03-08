@@ -2,6 +2,7 @@
 name = "sorter"
 version = "0.1.0"
 description = "An automatic sorting shelf for colored plastic bricks"
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -15,11 +16,34 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "license-scanner>=0.4.4",
     "pyrefly>=0.54.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "ruff>=0.15.2",
     "typeguard>=4.5.1",
+]
+
+[tool.license_scanner]
+allowed-licenses = [
+  "Apache Software License",
+  "Apache Software License v2",
+  "BSD License",
+  "BSD 2-clause License",
+  "BSD 2-clause FreeBSD License",
+  "BSD 3-clause License",
+  "CMU License (MIT-CMU)",
+  "ISC License",
+  "MIT",
+  "Mozilla Public License 2.0 (MPL 2.0)",
+  "Python Software Foundation License",
+  "Python Software Foundation License v2",
+]
+allowed-packages = [
+  "matplotlib_inline",  # BSD 3-clause License
+  "numpy",  # BSD 3-clause and MIT License
+  "pyrefly",  # MIT License
+  "python_dateutil",  # BSD License
 ]
 
 [tool.pytest.ini_options]

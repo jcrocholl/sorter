@@ -793,6 +793,15 @@ wheels = [
 ]
 
 [[package]]
+name = "license-scanner"
+version = "0.4.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/de/8bdfa62fa230da7651a65bc03ff8fe6db76c9c4c37ad928be638578fbaed/license_scanner-0.4.4.tar.gz", hash = "sha256:b3eb930f0b5b02f939464ff92e354be95db42cda8a745b14dca1cfc4f1238b48", size = 8947855, upload-time = "2025-11-10T13:32:07.104Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/d1/1670d2e830d9cac5529731f6ef530cea8dba9181228458ab80fd25c4fe4c/license_scanner-0.4.4-py3-none-any.whl", hash = "sha256:2e3455339254dd28c4b8fac59cb43805e70b408d665d148dbf4da95d8fefbb1b", size = 46094, upload-time = "2025-11-10T13:32:05.79Z" },
+]
+
+[[package]]
 name = "markdown"
 version = "3.10.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1256,7 +1265,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -1854,6 +1863,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "license-scanner" },
     { name = "pyrefly" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1873,6 +1883,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "license-scanner", specifier = ">=0.4.4" },
     { name = "pyrefly", specifier = ">=0.54.0" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
