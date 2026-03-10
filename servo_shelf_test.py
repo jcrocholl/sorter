@@ -22,7 +22,7 @@ def test_servo_shelf_init():
         0x42: MagicMock(name="pca_0x42"),
     }
 
-    shelf = ServoShelf(config, lambda addr: pcas[addr])
+    shelf = ServoShelf(config, lambda addr: pcas[addr], MagicMock(), MagicMock())
 
     # Check total number of servos:
     # 0x41: A1..A10 (10) + B1..B5 (5) = 15
@@ -80,7 +80,7 @@ def test_servo_shelf_init():
 def test_servo_shelf_missing_servo():
     config = {0x41: "A1:A5"}
 
-    shelf = ServoShelf(config, pca_factory)
+    shelf = ServoShelf(config, pca_factory, MagicMock(), MagicMock())
 
     with pytest.raises(KeyError):
         _ = shelf.servos["Z1"]
@@ -94,12 +94,12 @@ def test_servo_shelf_collision():
     }
 
     with pytest.raises(AssertionError, match="Duplicate servo label: A1"):
-        ServoShelf(config, pca_factory)
+        ServoShelf(config, pca_factory, MagicMock(), MagicMock())
 
 
 def test_servo_shelf_add_event_sorting():
     config = {0x41: "A1:A5"}
-    shelf = ServoShelf(config, pca_factory)
+    shelf = ServoShelf(config, pca_factory, MagicMock(), MagicMock())
 
     # Add events out of order
     shelf.add_event(100.0, "A1", 90.0)
@@ -121,7 +121,7 @@ def test_servo_shelf_process_queue():
     pca = MagicMock()
     config = {0x41: "A1:A5"}
 
-    shelf = ServoShelf(config, lambda addr: pca)
+    shelf = ServoShelf(config, lambda addr: pca, MagicMock(), MagicMock())
 
     # Plan events in the future and past
     now = time.time()
@@ -154,7 +154,7 @@ def test_servo_shelf_process_queue():
 
 def test_servo_shelf_stop_thread():
     config = {0x41: "A1:A5"}
-    shelf = ServoShelf(config, pca_factory)
+    shelf = ServoShelf(config, pca_factory, MagicMock(), MagicMock())
 
     shelf.start()
     assert shelf._thread is not None
@@ -162,3 +162,33 @@ def test_servo_shelf_stop_thread():
 
     shelf.stop()
     assert shelf._thread is None
+
+
+def test_servo_shelf_on_brick_recognized():
+    config = {0x41: "A0:A10"}
+    conveyor = MagicMock()
+    conveyor.get_kicker_distance.return_value = 500.0
+    conveyor.predict_travel_time.return_value = 2.0
+    mapping = MagicMock()
+    mapping.get_cell.return_value = "A3"
+    shelf = ServoShelf(config, pca_factory, conveyor, mapping)
+
+    now = 1000.0
+    shelf.on_brick_recognized(
+        timestamp=now,
+        brick_class="3001_brick_2x4",
+    )
+
+    # Expected events:
+    # 1. A3 open at 1000 + 2 - 0.1 = 1001.9
+    # 2. A0 kick at 1000 + 2 = 1002.0
+    # 3. A3 close at 1000 + 2 + 0.5 = 1002.5
+
+    assert len(shelf._queue) == 3
+    assert shelf._queue[0] == (1001.9, "A3", 90.0)
+    assert shelf._queue[1] == (1002.0, "A0", 45.0)
+    assert shelf._queue[2] == (1002.5, "A3", 0.0)
+
+    conveyor.get_kicker_distance.assert_called_once_with("A0")
+    conveyor.predict_travel_time.assert_called_once_with(500.0)
+    mapping.get_cell.assert_called_once_with("3001_brick_2x4")

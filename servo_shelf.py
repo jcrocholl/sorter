@@ -14,6 +14,8 @@ class ServoShelf:
         self,
         config: dict[int, str],
         pca_factory: Callable[[int], Any],
+        conveyor_belt: Any,
+        brick_mapping: Any,
     ) -> None:
         """Initialize the sorting shelf with a configuration.
 
@@ -24,6 +26,8 @@ class ServoShelf:
         """
         self.controllers: dict[int, ServoController] = {}
         self.servos: dict[str, ServoChannel] = {}
+        self.conveyor_belt = conveyor_belt
+        self.brick_mapping = brick_mapping
 
         for address, range_str in config.items():
             pca = pca_factory(address)
@@ -81,3 +85,38 @@ class ServoShelf:
             else:
                 # Sleep a bit to avoid busy waiting.
                 time.sleep(0.01)
+
+    def on_brick_recognized(
+        self,
+        timestamp: float,
+        brick_class: str,
+    ) -> None:
+        """Handle a recognized brick by scheduling kicker and flap movements.
+
+        Args:
+            timestamp: Time when the brick was recognized.
+            brick_class: The class name of the recognized brick.
+        """
+        cell_label = self.brick_mapping.get_cell(brick_class)
+        # Column is the first character of the cell label ('A1' => 'A').
+        column = cell_label[0]
+        kicker_label = column + "0"
+
+        distance = self.conveyor_belt.get_kicker_distance(kicker_label)
+        travel_time = self.conveyor_belt.predict_travel_time(distance)
+        if travel_time <= 0:
+            return
+
+        kick_time = timestamp + travel_time
+
+        # 1. Open the shelf box flap slightly before the brick arrives.
+        self.add_event(kick_time - 0.1, cell_label, 90.0)  # Open
+
+        # 2. Kick the brick at the right moment.
+        self.add_event(kick_time, kicker_label, 45.0)  # Kick
+        # TODO: The kicker servo needs to be reset, but this can only happen
+        # during a blank space on the conveyor belt, otherwise it would
+        # kick the wrong parts in the wrong direction.
+
+        # 3. Close the flap after the brick has fallen into the drawer.
+        self.add_event(kick_time + 0.5, cell_label, 0.0)  # Close

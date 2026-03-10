@@ -9,6 +9,7 @@ class ConveyorBelt:
         length: float,
         min_intervals: int = 3,
         max_intervals: int = 10,
+        kicker_distances: dict[str, float] | None = None,
     ) -> None:
         """
         Initialize the conveyor belt.
@@ -17,12 +18,18 @@ class ConveyorBelt:
             length: Total belt length in millimeters (mm).
             min_intervals: Minimum number of intervals to make predictions.
             max_intervals: Maximum number of intervals to keep for calibration.
+            kicker_distances: dict mapping kicker labels to distance from camera (mm).
         """
         self.length = length
         self._min_intervals = min_intervals
         self._max_intervals = max_intervals
         self._last_seen: dict[str, float] = {}
         self._intervals: list[float] = []
+        self._kicker_distances = kicker_distances or {}
+
+    def get_kicker_distance(self, label: str) -> float:
+        """Get the distance from the camera to a kicker servo by its label."""
+        return self._kicker_distances.get(label, 0.0)
 
     def observed_mark_at(self, mark: str, timestamp: float) -> None:
         """

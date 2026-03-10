@@ -7,6 +7,15 @@ def test_conveyor_belt_init():
     belt = ConveyorBelt(length=1000)
     assert belt.length == 1000
     assert belt.speed == 0.0
+    assert belt.get_kicker_distance("A0") == 0.0
+
+
+def test_conveyor_belt_kicker_distances():
+    kicker_distances = {"A0": 440.0, "B0": 480.0}
+    belt = ConveyorBelt(length=1000, kicker_distances=kicker_distances)
+    assert belt.get_kicker_distance("A0") == 440.0
+    assert belt.get_kicker_distance("B0") == 480.0
+    assert belt.get_kicker_distance("C0") == 0.0
 
 
 def test_conveyor_belt_calibration_min_intervals():
