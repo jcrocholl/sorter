@@ -9,12 +9,12 @@ class ServoController:
     def __init__(
         self,
         pca: Any,  # Real PCA9685 or MagicMock.
-        frequency: float = 50.0,  # Hz
         num_channels: int = 16,
+        frequency: float = 50.0,  # Hz
     ) -> None:
         self.pca = pca
-        self.frequency = frequency
         self.num_channels = num_channels
+        self.frequency = frequency
         self.send_frequency()
 
     def send_frequency(self) -> None:
@@ -41,6 +41,6 @@ class ServoController:
         if DEBUG:
             print(
                 f"pulse={pulse_usec}us period={period_usec}us"
-                f" on={on} off={off} 0xFFF={0xFFF}"
+                f" channel={channel} on={on} off={off} 0xFFF={0xFFF}"
             )
         self.send_pwm_regs(channel, on, off)

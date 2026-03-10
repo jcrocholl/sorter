@@ -1,5 +1,8 @@
+import time
 from unittest.mock import MagicMock
+
 import pytest
+
 from servo_shelf import ServoShelf
 
 
@@ -92,3 +95,70 @@ def test_servo_shelf_collision():
 
     with pytest.raises(AssertionError, match="Duplicate servo label: A1"):
         ServoShelf(config, pca_factory)
+
+
+def test_servo_shelf_add_event_sorting():
+    config = {0x41: "A1:A5"}
+    shelf = ServoShelf(config, pca_factory)
+
+    # Add events out of order
+    shelf.add_event(100.0, "A1", 90.0)
+    shelf.add_event(50.0, "A2", 45.0)
+    shelf.add_event(150.0, "A3", 0.0)
+    shelf.add_event(75.0, "A4", 180.0)
+
+    # Check that the queue is sorted by timestamp
+    expected = [
+        (50.0, "A2", 45.0),
+        (75.0, "A4", 180.0),
+        (100.0, "A1", 90.0),
+        (150.0, "A3", 0.0),
+    ]
+    assert shelf._queue == expected
+
+
+def test_servo_shelf_process_queue():
+    pca = MagicMock()
+    config = {0x41: "A1:A5"}
+
+    shelf = ServoShelf(config, lambda addr: pca)
+
+    # Plan events in the future and past
+    now = time.time()
+    shelf.add_event(now - 1.0, "A1", 90.0)  # Past
+    shelf.add_event(now + 0.1, "A2", 45.0)  # Near future
+
+    # Check initial state: no calls yet
+    assert pca.pwm_regs.__setitem__.call_count == 0
+
+    shelf.start()
+    try:
+        # Wait for "past" event to be processed
+        # (It should be picked up almost immediately)
+        time.sleep(0.05)
+        # Check that A1 (channel 0) was called
+        # ServoController.send_pwm_regs sets pca.pwm_regs[channel] = (on, off)
+        # We check if __setitem__ was called with index 0.
+        assert any(
+            call.args[0] == 0 for call in pca.pwm_regs.__setitem__.call_args_list
+        ), "A1 (channel 0) should have been processed"
+
+        # Now wait for the near future event
+        time.sleep(0.1)
+        assert any(
+            call.args[0] == 1 for call in pca.pwm_regs.__setitem__.call_args_list
+        ), "A2 (channel 1) should have been processed"
+    finally:
+        shelf.stop()
+
+
+def test_servo_shelf_stop_thread():
+    config = {0x41: "A1:A5"}
+    shelf = ServoShelf(config, pca_factory)
+
+    shelf.start()
+    assert shelf._thread is not None
+    assert shelf._thread.is_alive()
+
+    shelf.stop()
+    assert shelf._thread is None
