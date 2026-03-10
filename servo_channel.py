@@ -47,12 +47,20 @@ def parse_range(text: str) -> list[tuple[str, int]]:
 
     m = _RANGE_REGEX.match(text)
     if m:
-        col = m.group(1)
+        col1 = m.group(1)
         row1 = int(m.group(2))
         col2 = m.group(3)
         row2 = int(m.group(4))
-        assert col == col2, "multi-column ranges are not supported"
-        return [(col, row) for row in range(row1, row2 + 1)]
+        if col1 == col2:
+            return [(col1, row) for row in range(row1, row2 + 1)]
+        if row1 == row2:
+            c1 = col_to_int(col1)
+            c2 = col_to_int(col2)
+            return [(int_to_col(c), row1) for c in range(c1, c2 + 1)]
+        raise ValueError(
+            f"multi-dimensional ranges are not supported: {text} "
+            "(expected either same column or same row)"
+        )
 
     raise ValueError(f"failed to parse range {text} (expected something like A1:A10)")
 

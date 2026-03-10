@@ -33,6 +33,19 @@ def test_parse_range():
     ]
 
 
+def test_parse_range_multicol():
+    assert servo_channel.parse_range("A0:C0") == [
+        ("A", 0),
+        ("B", 0),
+        ("C", 0),
+    ]
+    assert servo_channel.parse_range("X7:Z7") == [
+        ("X", 7),
+        ("Y", 7),
+        ("Z", 7),
+    ]
+
+
 def test_parse_range_invalid():
     with pytest.raises(ValueError):
         servo_channel.parse_range("1A")
@@ -42,6 +55,8 @@ def test_parse_range_invalid():
         servo_channel.parse_range("1")
     with pytest.raises(ValueError):
         servo_channel.parse_range("A1:10")
+    with pytest.raises(ValueError, match="multi-dimensional ranges are not supported"):
+        servo_channel.parse_range("A1:B5")
 
 
 def test_parse_ranges():
